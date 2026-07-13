@@ -1,0 +1,15 @@
+# 子仓库原有的 .git 目录保留作为历史参考，不纳入顶层仓库管理
+PINN4SOH/.git/
+Battery-dataset-preprocessing-code-library/.git/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时测试产物
+results/smoke_test/
+
+# IDE
+.idea/
+.vscode/
