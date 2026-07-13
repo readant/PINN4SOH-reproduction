@@ -7,6 +7,8 @@ English:
 import pandas as pd
 import numpy as np
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # [修复] 添加 PINN4SOH 根目录到 path
 from utils.util import eval_metrix
 import matplotlib.pyplot as plt
 import scienceplots
@@ -171,7 +173,7 @@ class Results:
         # df_mean = df_mean.append(mean, ignore_index=True)
         print('-'*50)
         print(f'batch {train_batch+1}')
-        print(f'mean:  MAPE:{mean[2]:.4f}, RMSE:{mean[3]:.4f}')
+        print(f'mean:  MAPE:{mean.iloc[2]:.4f}, RMSE:{mean.iloc[3]:.4f}')  # [兼容] 新版 pandas Series 需用 iloc 位置索引
 
         return df_mean
 
@@ -204,9 +206,10 @@ class Results:
 
 
 if __name__ == '__main__':
-    # [路径统一] 原目录 'results of reviewer/' 改为 'results/'，与主训练脚本路径保持一致
-    root = '../results/XJTU results/'
-    writer = pd.ExcelWriter('../results/XJTU_results.xlsx')
+    # [路径统一] 使用脚本所在目录为基准，避免从不同目录运行时路径错乱
+    BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    root = os.path.join(BASE, 'results/XJTU results/')
+    writer = pd.ExcelWriter(os.path.join(BASE, 'results/XJTU_results.xlsx'))
 
     results = Results(root)
     for batch in range(6):
@@ -214,7 +217,7 @@ if __name__ == '__main__':
         df_battery_mean.to_excel(writer,sheet_name='battery_mean_{}'.format(batch),index=False)
         # df_experiment_mean = results.get_experiments_mean(train_batch=batch,test_batch=batch,total_experiment=10)
         # df_experiment_mean.to_excel(writer,sheet_name='experiment_mean_{}'.format(batch),index=False)
-    writer.save()
+    writer.close()  # [兼容] pandas 3.x 改用 close() 替代 save()
 
 
 
