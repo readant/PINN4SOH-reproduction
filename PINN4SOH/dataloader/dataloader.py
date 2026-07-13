@@ -47,9 +47,9 @@ class DF():
         :return: DataFrame
         '''
         df = pd.read_csv(file_name)
-        # [环境适配] 原代码: np.arange(df.shape[0]) → 默认 dtype=int64
-        # pandas>=2.0 不允许将 float64 归一化结果写回 int64 列，会抛出 TypeError
-        # 显式指定 dtype=np.float64 以兼容新版 pandas
+        # [环境适配] pandas>=2.0 不允许 float64 赋给 int64 列。归一化会将所有列转为 float，
+        # 但原始 CSV 可能含 int64 列（如 HUST 的 'CC charge time'），强制统一为 float64
+        df = df.astype({col: 'float64' for col in df.select_dtypes(include=['int64']).columns})
         df.insert(df.shape[1]-1,'cycle index',np.arange(df.shape[0], dtype=np.float64))
 
         df = self.delete_3_sigma(df)
