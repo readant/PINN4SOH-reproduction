@@ -1,0 +1,48 @@
+data path:
+['data/XJTU data\\2C_battery-1.csv', 'data/XJTU data\\2C_battery-2.csv', 'data/XJTU data\\2C_battery-3.csv', 'data/XJTU data\\2C_battery-5.csv', 'data/XJTU data\\2C_battery-6.csv', 'data/XJTU data\\2C_battery-7.csv']
+data path:
+['data/XJTU data\\2C_battery-4.csv', 'data/XJTU data\\2C_battery-8.csv']
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:001, data loss:0.607757
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:001, data loss:0.211549
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:002, data loss:0.183249
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:002, data loss:0.081256
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:003, data loss:0.079762
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:003, data loss:0.060967
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:004, data loss:0.082181
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:004, data loss:0.026712
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:005, data loss:0.032648
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:005, data loss:0.007074
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:006, data loss:0.030914
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:006, data loss:0.018022
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:007, data loss:0.026284
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:007, data loss:0.006455
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:008, data loss:0.015048
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:008, data loss:0.003609
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:009, data loss:0.013184
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:009, data loss:0.003994
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:010, data loss:0.009509
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:010, data loss:0.002647
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:011, data loss:0.005894
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:011, data loss:0.001172
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:012, data loss:0.003983
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:012, data loss:0.003029
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:013, data loss:0.003636
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:013, data loss:0.001495
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:014, data loss:0.003067
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:014, data loss:0.002195
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:015, data loss:0.002982
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:015, data loss:0.001538
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:016, data loss:0.002309
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:016, data loss:0.001786
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:017, data loss:0.002147
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:017, data loss:0.001441
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:018, data loss:0.001923
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:018, data loss:0.001499
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:019, data loss:0.001691
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:019, data loss:0.001264
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:020, data loss:0.001743
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:020, data loss:0.001624
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:021, data loss:0.001582
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:021, data loss:0.001567
+2026-07-13 12:58 - function:train_one_epoch - INFO - [Train] epoch:022, data loss:0.001643
+2026-07-13 12:58 - function:valid - INFO - [Valid] epoch:022, data loss:0.001489

@@ -1,0 +1,44 @@
+data path:
+['data/XJTU data\\R2.5_battery-1.csv', 'data/XJTU data\\R2.5_battery-2.csv', 'data/XJTU data\\R2.5_battery-3.csv', 'data/XJTU data\\R2.5_battery-5.csv', 'data/XJTU data\\R2.5_battery-6.csv', 'data/XJTU data\\R2.5_battery-7.csv']
+data path:
+['data/XJTU data\\R2.5_battery-4.csv', 'data/XJTU data\\R2.5_battery-8.csv']
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:001, data loss:1.075890
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:001, data loss:0.369689
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:002, data loss:0.209340
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:002, data loss:0.052867
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:003, data loss:0.085755
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:003, data loss:0.087981
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:004, data loss:0.057573
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:004, data loss:0.006032
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:005, data loss:0.026631
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:005, data loss:0.006501
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:006, data loss:0.015845
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:006, data loss:0.018247
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:007, data loss:0.014191
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:007, data loss:0.011623
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:008, data loss:0.008468
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:008, data loss:0.005881
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:009, data loss:0.004265
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:009, data loss:0.002737
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:010, data loss:0.003801
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:010, data loss:0.004133
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:011, data loss:0.004235
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:011, data loss:0.003505
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:012, data loss:0.002885
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:012, data loss:0.003382
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:013, data loss:0.002902
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:013, data loss:0.005036
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:014, data loss:0.002334
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:014, data loss:0.003358
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:015, data loss:0.002469
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:015, data loss:0.004473
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:016, data loss:0.002134
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:016, data loss:0.003584
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:017, data loss:0.002013
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:017, data loss:0.003143
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:018, data loss:0.001818
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:018, data loss:0.003584
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:019, data loss:0.001660
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:019, data loss:0.003765
+2026-07-13 12:59 - function:train_one_epoch - INFO - [Train] epoch:020, data loss:0.001659
+2026-07-13 12:59 - function:valid - INFO - [Valid] epoch:020, data loss:0.002742
