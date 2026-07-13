@@ -36,6 +36,7 @@ SOH = Q_current / Q_nominal × 100%
 | 外推能力强 | 电化学方程复杂难解 |
 
 代表性工作：
+
 - Dakin退化方法（线性退化）
 - Arrhenius温度模型 + Wiener过程
 - SEI膜生长模型
@@ -50,6 +51,7 @@ SOH = Q_current / Q_nominal × 100%
 | 无需物理知识 | 需要大量数据 |
 
 代表性工作：
+
 - 支持向量机（SVM）
 - 高斯过程回归（GPR）
 - 深度神经网络（DNN/CNN）
