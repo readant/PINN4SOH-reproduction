@@ -177,7 +177,7 @@ if __name__ == '__main__':
     args = get_args()
     xjtu_batch_names = ['2C','3C','R2.5','R3','RW','satellite']
     # tju_batch = [0,1,2]
-    setattr(args,'model','MLP') # select model: MLP or CNN
+    setattr(args,'model','CNN')  # select model: MLP or CNN
     for i in range(len(xjtu_batch_names)):
         setattr(args,'xjtu_batch',xjtu_batch_names[i])
         # setattr(args,'tju_batch',tju_batch[i])
