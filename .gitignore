@@ -1,6 +1,6 @@
-# 子仓库原有的 .git 目录保留作为历史参考，不纳入顶层仓库管理
-PINN4SOH/.git/
-Battery-dataset-preprocessing-code-library/.git/
+# 子仓库原有的 .git 目录保留为 .git.backup（历史参考），不纳入顶层仓库管理
+PINN4SOH/.git.backup/
+Battery-dataset-preprocessing-code-library/.git.backup/
 
 # Python
 __pycache__/
