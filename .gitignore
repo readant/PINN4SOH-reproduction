@@ -13,3 +13,6 @@ results/smoke_test/
 # IDE
 .idea/
 .vscode/
+
+# 实验结果（可重新生成）
+PINN4SOH/results_fine-tuning/
