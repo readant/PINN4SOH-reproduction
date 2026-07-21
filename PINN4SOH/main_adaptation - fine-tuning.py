@@ -302,9 +302,8 @@ def FineTune():
 
 
 if __name__ == '__main__':
-    # FineTune()
-    # FineTune_MIT2HUST()
-    # FineTune_HUST2MIT()
     # FineTune_TJU2XJTU()
     # FineTune_XJTU2TJU()
+    # FineTune_HUST2MIT()
+    # FineTune_MIT2HUST()
     pass

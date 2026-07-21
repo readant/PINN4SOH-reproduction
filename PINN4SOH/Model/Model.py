@@ -174,7 +174,7 @@ class PINN(nn.Module):
         self.logger.handlers.clear()
 
     def load_model(self, model_path):
-        checkpoint = torch.load(model_path)
+        checkpoint = torch.load(model_path, map_location=device)
         self.solution_u.load_state_dict(checkpoint['solution_u'])
         self.dynamical_F.load_state_dict(checkpoint['dynamical_F'])
         for param in self.solution_u.parameters():
