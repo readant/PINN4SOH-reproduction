@@ -6,6 +6,9 @@ Battery-dataset-preprocessing-code-library/.git.backup/
 __pycache__/
 *.pyc
 *.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
 # 临时测试产物
 results/smoke_test/
@@ -23,3 +26,7 @@ PINN4SOH/results_fine-tuning/
 PINN4SOH/results/Ours/*.zip
 PINN4SOH/results/MLP/*.zip
 PINN4SOH/results/CNN/*.zip
+
+
+# 学习研究草稿
+nc-pinn/
