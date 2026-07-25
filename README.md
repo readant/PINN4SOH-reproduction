@@ -281,3 +281,4 @@ python run_all.py all            # 全部跑
 
 - GitHub Issues: [https://github.com/readant/nc-PINN/issues](https://github.com/readant/nc-PINN/issues)
 - Email: 3908492312@qq.com
+- Gmail: readant123@gmail.com
