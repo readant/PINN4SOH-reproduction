@@ -13,6 +13,13 @@ results/smoke_test/
 # IDE
 .idea/
 .vscode/
+.ipynb_checkpoints/
+
+# 论文 PDF（已发表在 Nature Communications，有 DOI 可获取）
+*.pdf
 
 # 实验结果（可重新生成）
 PINN4SOH/results_fine-tuning/
+PINN4SOH/results/Ours/*.zip
+PINN4SOH/results/MLP/*.zip
+PINN4SOH/results/CNN/*.zip
