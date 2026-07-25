@@ -1,0 +1,42 @@
+Creative Commons Attribution 4.0 International License (CC BY 4.0)
+
+Copyright (c) 2024 Fujin Wang, Zhi Zhai, Zhibin Zhao, Yi Ding, Xuefeng Chen
+
+This work is licensed under the Creative Commons Attribution 4.0 International
+License (CC BY 4.0). To view a copy of this license, visit
+https://creativecommons.org/licenses/by/4.0/ or send a letter to
+Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+You are free to:
+
+  Share - copy and redistribute the material in any medium or format
+  Adapt - remix, transform, and build upon the material for any purpose,
+          even commercially
+
+Under the following terms:
+
+  Attribution - You must give appropriate credit, provide a link to the
+  license, and indicate if changes were made. You may do so in any
+  reasonable manner, but not in any way that suggests the licensor
+  endorses you or your use.
+
+  No additional restrictions - You may not apply legal terms or
+  technological measures that legally restrict others from doing
+  anything the license permits.
+
+Notices:
+
+  This repository is a reproduction of the paper:
+  "Physics-informed neural network for lithium-ion battery degradation
+   stable modeling and prognosis"
+  published in Nature Communications, 2024, 15:4332
+  DOI: 10.1038/s41467-024-48779-z
+
+  The original code is available at:
+  https://github.com/wang-fujin/PINN4SOH
+
+  This reproduction includes:
+  - Environment compatibility fixes (Python 3.7 -> 3.12, PyTorch 1.7 -> 2.11)
+  - One-click execution script (run_all.py)
+  - Complete technical documentation in Chinese (docs/)
+  - Reproduction report with detailed results comparison
