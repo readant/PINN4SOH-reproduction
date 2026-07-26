@@ -23,6 +23,8 @@ results/smoke_test/
 
 # 论文 PDF（已发表在 Nature Communications，有 DOI 可获取）
 *.pdf
+nc-PINN.pdf
+nc-PINN.pdf
 
 # 实验结果（可重新生成）
 PINN4SOH/results_fine-tuning/
@@ -32,3 +34,7 @@ PINN4SOH/results/CNN/*.zip
 
 # 学习研究草稿
 nc-pinn/
+
+
+# 其他工具
+.mimocode/
