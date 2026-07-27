@@ -17,6 +17,7 @@ results/smoke_test/
 .idea/
 .vscode/
 .ipynb_checkpoints/
+.workbuddy/
 
 # 论文 PDF（已发表在 Nature Communications，有 DOI 可获取）
 *.pdf
