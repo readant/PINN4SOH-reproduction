@@ -1,10 +1,58 @@
 from sklearn import metrics
 import numpy as np
 import logging
+import random
+import os
+import torch
+
+
+def set_seed(seed=42, deterministic=True):
+    """
+    [可复现性修复] 固定所有随机源。
+
+    原代码只固定了 train_test_split 的 random_state=420，而模型权重初始化
+    (xavier_normal_)、Dropout 掩码、DataLoader 的 shuffle 顺序全部依赖未初始化的
+    全局随机状态 —— 导致同一份配置两次运行会给出不同结果，"10 次实验取平均"
+    也无法被他人复现。
+
+    注意：不要对所有实验使用同一个种子。10 次 Experiment 若种子相同，得到的是
+    10 个完全一样的结果，均值毫无统计意义。正确做法是每次实验用
+    `base_seed + experiment_index`（见各 main 的 --seed 用法）。
+
+    :param seed: 随机种子
+    :param deterministic: 是否强制 cuDNN 确定性算法。True 可保证逐位可复现，
+                           但会牺牲部分训练速度；仅在需要严格复现时开启。
+    """
+    seed = int(seed)
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    if deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def _close_logger_handlers(logger):
+    """安全移除并关闭 logger 上的所有 handler（供 get_logger / clear_logger 复用）。"""
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+        try:
+            handler.close()
+        except Exception:
+            pass
+
 
 def get_logger(log_name='log.txt'):
     logger = logging.getLogger('mylogger')
     logger.setLevel(level=logging.DEBUG)
+    # [修复] getLogger('mylogger') 是进程级单例，原实现每次调用都 addHandler，
+    # 循环跑 10 次实验会累积 10 组 handler：日志重复打印 N 遍，且 FileHandler
+    # 一直持有文件句柄造成泄漏。这里在挂载新 handler 前先彻底清理旧的。
+    _close_logger_handlers(logger)
     formatter = logging.Formatter('%(asctime)s - function:%(funcName)s - %(levelname)s - %(message)s',datefmt='%Y-%m-%d %H:%M')
 
     console = logging.StreamHandler()
@@ -58,6 +106,13 @@ def eval_metrix_with_r2(true_label, pred_label):
     return [MAE, MAPE, MSE, RMSE, R2]
 
 def write_to_txt(txt_name,txt):
+    # [健壮性] 原实现假设目标目录已存在。目录实际由 PINN.__init__ 创建，
+    # 而 load_all_battery 在 PINN 之前就会调用本函数写日志 ——
+    # 一旦调用方忘记提前建目录（如自定义脚本），就会 FileNotFoundError。
+    # 这里兜底创建，让调用顺序不再敏感。
+    dir_name = os.path.dirname(txt_name)
+    if dir_name:
+        os.makedirs(dir_name, exist_ok=True)
     with open(txt_name,'a') as f:
         f.write(txt)
         f.write('\n')
