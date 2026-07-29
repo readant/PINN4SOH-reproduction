@@ -1,6 +1,7 @@
 
 from dataloader.dataloader import XJTUdata,TJUdata
 from Model.Model import PINN
+from utils.split import uniform_split, describe_split
 import argparse
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -38,6 +39,17 @@ def get_args():
     parser.add_argument('--alpha', type=float, default=1, help='loss = l_data + alpha * l_PDE + beta * l_physics')
     parser.add_argument('--beta', type=float, default=0.05, help='loss = l_data + alpha * l_PDE + beta * l_physics')
 
+    # 可复现性相关 (reproducibility)
+    parser.add_argument('--seed', type=int, default=42,
+                        help='基础随机种子。第 e 次实验使用 seed+e，'
+                             '使 10 次实验彼此不同（统计有意义）但整轮可完整复现')
+    parser.add_argument('--split_strategy', type=str, default='legacy',
+                        choices=['legacy', 'uniform'],
+                        help='legacy: 沿用原划分规则（保持历史基线不变）；'
+                             'uniform: 使用 utils/split.py 的统一规则')
+    parser.add_argument('--deterministic', type=bool, default=True,
+                        help='是否强制 cuDNN 确定性算法。True 可逐位复现，但会略降训练速度')
+
     parser.add_argument('--log_dir', type=str, default='logging.txt', help='log dir, if None, do not save')
     parser.add_argument('--save_folder', type=str, default='results/TJU results', help='save folder')
 
@@ -59,17 +71,24 @@ def load_TJU_data(args,small_sample=None):
         batchs = os.listdir(root)
         batch = batchs[args.batch]
         batch_root = os.path.join(root,batch)
-        files = os.listdir(batch_root)
-        for i,f in enumerate(files):
-            # 判断i的个位数字是否为5或者9 (judge whether the units digit of i is 5 or 9)
-            id = i + 1
-            if id % 10 == mod[args.batch][0] or id % 10 == mod[args.batch][1]:
-                test_list.append(os.path.join(batch_root,f))
-                print(f)
-            else:
-                train_list.append(os.path.join(batch_root,f))
+        files = [os.path.join(batch_root, f) for f in os.listdir(batch_root)]
+
+        if getattr(args, 'split_strategy', 'legacy') == 'uniform':
+            train_list, test_list = uniform_split(files)
+        else:
+            # 原实现：依赖 os.listdir 的枚举下标判断个位是否为 mod 元组指定的数字。
+            # os.listdir 不保证返回顺序，在不同文件系统上可能得到不同划分；
+            # 且三个 Dataset 各用一套 mod 元组（(5,9)/(4,8)/(5,9)）。
+            train_list, test_list = [], []
+            for i, path in enumerate(files):
+                bid = i + 1
+                if bid % 10 == mod[args.batch][0] or bid % 10 == mod[args.batch][1]:
+                    test_list.append(path)
+                else:
+                    train_list.append(path)
         if small_sample is not None:
             train_list = train_list[:small_sample]
+        print(describe_split(f'TJU/{batch}', train_list, test_list))
         train_loader = data.read_all(specific_path_list=train_list)
         test_loader = data.read_all(specific_path_list=test_list)
         dataloader = {'train': train_loader['train_2'],
@@ -91,11 +110,15 @@ def load_TJU_data(args,small_sample=None):
 def main():
     args = get_args()
     batchs = [0,1,2]
+    base_seed = args.seed
 
     for batch in batchs:
         setattr(args, 'in_same_batch', True)
         setattr(args, 'batch', batch)
         for e in range(10):
+            # [可复现性] 每次实验使用 seed+e：10 次实验彼此不同（统计有意义），
+            # 但整轮实验可被完整复现。
+            setattr(args, 'seed', base_seed + e)
             if args.in_same_batch:
                 save_folder = 'results/TJU results/' + str(batch) + '-' + str(batch) + '/Experiment' + str(e + 1)
             else:
@@ -113,7 +136,9 @@ def small_sample():
     args = get_args()
     num_battery = 2
     batch = 2
+    base_seed = args.seed
     for e in range(10):
+        setattr(args, 'seed', base_seed + e)
         setattr(args,'in_same_batch',True)
         setattr(args,'batch',batch)
         setattr(args,'save_folder',f'results/TJU results (small sample {num_battery})/{batch}-{batch}/Experiment{e+1}')

@@ -1,5 +1,6 @@
 from dataloader.dataloader import XJTUdata
 from Model.Model import PINN
+from utils.split import uniform_split, describe_split
 import argparse
 import os
 
@@ -8,17 +9,26 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 def load_data(args,small_sample=None):
     root = 'data/XJTU data'
     data = XJTUdata(root=root, args=args)
-    train_list = []
-    test_list = []
     files = os.listdir(root)
-    for file in files:
-        if args.batch in file:
-            if '4' in file or '8' in file:
-                test_list.append(os.path.join(root, file))
+    batch_files = [os.path.join(root, f) for f in files if args.batch in f]
+
+    if getattr(args, 'split_strategy', 'legacy') == 'uniform':
+        train_list, test_list = uniform_split(batch_files)
+    else:
+        train_list, test_list = [], []
+        for path in batch_files:
+            # 原实现：对文件名做子串匹配。编号里含 4 或 8 的电池一律划入测试集
+            #（如 3C batch 的 14 号电池会因含 '4' 被误判为测试集）。
+            # 保留原行为以维持历史基线，改用 --split_strategy uniform 可规避。
+            if '4' in os.path.basename(path) or '8' in os.path.basename(path):
+                test_list.append(path)
             else:
-                train_list.append(os.path.join(root, file))
+                train_list.append(path)
     if small_sample is not None:
         train_list = train_list[:small_sample]
+
+    if getattr(args, 'split_strategy', 'legacy') == 'uniform':
+        print(describe_split(f'XJTU/{args.batch}', train_list, test_list))
 
     train_loader = data.read_all(specific_path_list=train_list)
     test_loader = data.read_all(specific_path_list=test_list)
@@ -30,10 +40,14 @@ def load_data(args,small_sample=None):
 def main():
     args = get_args()
     batchs = ['2C', '3C', 'R2.5', 'R3', 'RW', 'satellite']
+    base_seed = args.seed
     for i in range(6):
         batch = batchs[i]
         setattr(args, 'batch', batch)
         for e in range(10):
+            # [可复现性] 每次实验使用 seed+e：10 次实验彼此不同（统计有意义），
+            # 但整轮实验可被完整复现。
+            setattr(args, 'seed', base_seed + e)
             save_folder = 'results/XJTU results/' + str(i) + '-' + str(i) + '/Experiment' + str(e + 1)  # [路径统一] 原为 'results of reviewer/...'
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
@@ -48,6 +62,7 @@ def main():
 def small_sample():
     args = get_args()
     batchs = ['2C', '3C', 'R2.5', 'R3', 'RW', 'satellite']
+    base_seed = args.seed
     for n in [1,2,3,4]:
         for i in range(6):
             batch = batchs[i]
@@ -56,6 +71,7 @@ def small_sample():
             setattr(args,'alpha',0.5)
             setattr(args,'beta',10)
             for e in range(10):
+                setattr(args, 'seed', base_seed + e)
                 save_folder = f'results/XJTU results (small sample {n})/' + str(i) + '-' + str(i) + '/Experiment' + str(e + 1)
                 if not os.path.exists(save_folder):
                     os.makedirs(save_folder)
@@ -98,6 +114,17 @@ def get_args():
     # loss related
     parser.add_argument('--alpha', type=float, default=0.7, help='loss = l_data + alpha * l_PDE + beta * l_physics')
     parser.add_argument('--beta', type=float, default=0.2, help='loss = l_data + alpha * l_PDE + beta * l_physics')
+
+    # 可复现性相关 (reproducibility)
+    parser.add_argument('--seed', type=int, default=42,
+                        help='基础随机种子。第 e 次实验使用 seed+e，'
+                             '使 10 次实验彼此不同（统计有意义）但整轮可完整复现')
+    parser.add_argument('--split_strategy', type=str, default='legacy',
+                        choices=['legacy', 'uniform'],
+                        help='legacy: 沿用原划分规则（保持历史基线不变）；'
+                             'uniform: 使用 utils/split.py 的统一规则')
+    parser.add_argument('--deterministic', type=bool, default=True,
+                        help='是否强制 cuDNN 确定性算法。True 可逐位复现，但会略降训练速度')
 
     parser.add_argument('--log_dir', type=str, default='text log.txt', help='log dir, if None, do not save')
     # [路径统一] 原代码保存到 'results of reviewer/XJTU results/'，与 results/ 目录结构不一致
