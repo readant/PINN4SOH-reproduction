@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.autograd import grad
-from utils.util import AverageMeter,get_logger,eval_metrix
+from utils.util import AverageMeter,get_logger,eval_metrix,set_seed,_close_logger_handlers
 import os
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # device = 'cpu'
@@ -108,11 +108,19 @@ class LR_Scheduler(object):
         self.current_lr = 0
 
     def step(self):
+        # [修复] 原实现在 param_groups 为空、或全部走 constant_predictor_lr 分支时，
+        # 循环体内的 lr 从未被赋值，末尾的 `self.current_lr = lr` 会抛
+        # UnboundLocalError。这里先给一个兜底值。
+        lr = self.current_lr
         for param_group in self.optimizer.param_groups:
 
-            if self.constant_predictor_lr and param_group['name'] == 'predictor':
+            if self.constant_predictor_lr and param_group.get('name') == 'predictor':
                 param_group['lr'] = self.base_lr
+                # [修复] 原实现在此分支不给 lr 赋值，导致末尾 UnboundLocalError
+                lr = self.base_lr
             else:
+                # [修复] 原为 param_group['name']，若某 param_group 未设置 name
+                # 会抛 KeyError；改用 .get() 更安全
                 lr = param_group['lr'] = self.lr_schedule[self.iter]
 
         self.iter += 1
@@ -128,6 +136,12 @@ class PINN(nn.Module):
     def __init__(self,args):
         super(PINN, self).__init__()
         self.args = args
+        # [可复现性] 必须在构建 Solution_u / dynamical_F 之前播种 ——
+        # 权重初始化（xavier_normal_）和 Dropout 都消耗全局随机状态。
+        # 种子由调用方通过 args.seed 传入；各 main 中按实验序号递增，
+        # 使 10 次实验彼此不同但可完整复现。
+        set_seed(seed=getattr(args, 'seed', 42),
+                 deterministic=getattr(args, 'deterministic', True))
         if args.save_folder is not None and not os.path.exists(args.save_folder):
             os.makedirs(args.save_folder)
         log_dir = args.log_dir if args.save_folder is None else os.path.join(args.save_folder, args.log_dir)
@@ -170,11 +184,17 @@ class PINN(nn.Module):
                 self.logger.critical(f"\t{k}:{v}")
 
     def clear_logger(self):
-        self.logger.removeHandler(self.logger.handlers[0])
-        self.logger.handlers.clear()
+        # [修复] 原实现 `removeHandler(self.logger.handlers[0])` 在 handlers 为空时
+        # 抛 IndexError，且未关闭 FileHandler 造成文件句柄泄漏。
+        _close_logger_handlers(self.logger)
 
     def load_model(self, model_path):
-        checkpoint = torch.load(model_path, map_location=device)
+        # [安全/兼容] PyTorch 2.6 起 torch.load 默认 weights_only=True；
+        # 显式声明以消除未来版本的行为差异，并对旧版本做兜底。
+        try:
+            checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+        except TypeError:
+            checkpoint = torch.load(model_path, map_location=device)
         self.solution_u.load_state_dict(checkpoint['solution_u'])
         self.dynamical_F.load_state_dict(checkpoint['dynamical_F'])
         for param in self.solution_u.parameters():
