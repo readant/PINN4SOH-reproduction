@@ -100,11 +100,28 @@ def test_uniform_split_natural_order():
 
 
 def test_uniform_split_spread():
-    """测试电池应在整个编号范围内均匀分散，而不是集中在尾部。"""
-    files = [f'battery-{i}.csv' for i in range(1, 21)]
-    _, test = uniform_split(files, test_ratio=0.2)
+    """
+    测试电池应在编号范围内均匀分散，且不出现"固定吃掉编号最小电池"的偏置。
+
+    判定（两条都必须成立，缺一即失败）：
+    1. 不含编号最小的电池 —— 去偏置回归：原实现 int(i*step) 恒从索引 0 起算，
+       XJTU 6 个 batch 的测试集全部包含 1 号电池；
+    2. 相邻测试编号的间隔不超过 2 个理论步长 —— 确为均匀铺开而非聚集在尾部。
+
+    注：早期版本此处返回 `max(ids) <= 20`，而 ids 全部取自 range(1,21)，
+    该断言恒为真、不构成任何验证，已替换。
+    """
+    files = [f'battery-{i}.csv' for i in range(1, 21)]   # 20 只电池
+    train, test = uniform_split(files, test_ratio=0.2)   # 期望 4 只测试
     ids = sorted(int(os.path.basename(f).split('-')[-1].split('.')[0]) for f in test)
-    return ids, max(ids) <= 20
+
+    n_test = len(ids) if ids else 1
+    step = len(files) / n_test
+    no_min_bias = bool(ids) and ids[0] != 1
+    uniformly_spread = len(ids) > 1 and all(
+        b - a <= 2 * step for a, b in zip(ids, ids[1:]))
+    detail = f'抽取编号 {ids}（理论步长 {step:.1f}，不含 1 号={no_min_bias}）'
+    return (no_min_bias and uniformly_spread), detail
 
 
 # ---------------------------------------------------------------- 3. 已知缺陷
@@ -157,6 +174,75 @@ def test_logger_no_leak():
     return n == 2, f'handler 数量={n}（期望 2）'
 
 
+def test_train_early_stop_policy():
+    """
+    早停策略回归：不依赖真实训练，用桩替换单轮训练与评估。
+
+    覆盖三种场景：
+    A. validloader=None：**不得早停**，必须跑满 epochs。
+       （原实现 valid_mse 恒为初值 10、判定恒真、early_stop 永远归零，
+        训练永不早停且每轮覆盖保存。）
+    B. 有 validloader 且验证误差不再改善：连续 early_stop 次无改善后停止。
+    C. validloader 与 testloader 都缺：显式抛 ValueError，而不是静默退化。
+    """
+    import argparse
+    import logging as _logging
+    from Model.Model import PINN
+
+    def make_stub(epochs, early_stop, valid_values):
+        m = object.__new__(PINN)          # 跳过 PINN.__init__，避免建目录 / 写日志文件
+        torch.nn.Module.__init__(m)       # 但必须补齐 nn.Module 的内部结构，否则无法挂子模块
+        m.args = argparse.Namespace(epochs=epochs, early_stop=early_stop, save_folder=None)
+        m.alpha, m.beta = 0.0, 0.0
+        m.best_model = None
+        m.solution_u = torch.nn.Linear(2, 1)
+        m.dynamical_F = torch.nn.Linear(2, 1)
+        m.scheduler = argparse.Namespace(step=lambda: 0.01)
+        m.logger = _logging.getLogger('verify_probe')
+        m.logger.addHandler(_logging.NullHandler())
+        m.clear_logger = lambda: None
+        calls = {'train': 0, 'valid': 0}
+
+        def _train_one_epoch(epoch, loader):
+            calls['train'] += 1
+            return 1.0, 0.0, 0.0
+
+        def _valid(loader):
+            idx = min(calls['valid'], len(valid_values) - 1)
+            calls['valid'] += 1
+            return valid_values[idx]
+
+        m.train_one_epoch = _train_one_epoch
+        m.Valid = _valid
+        m.Test = lambda loader: (torch.zeros(4).numpy(), torch.zeros(4).numpy())
+        return m, calls
+
+    # 场景 A：有 testloader、无 validloader → 跑满 5 轮，不早停
+    m, calls = make_stub(epochs=5, early_stop=1, valid_values=[1.0])
+    m.Train(trainloader=[], validloader=None, testloader=[])
+    n_full = calls['train']
+    a_ok = n_full == 5
+
+    # 场景 B：验证误差 1.0(改善) → 0.5(改善) → 之后恒 0.5，early_stop=2
+    #         期望：第 5 轮触发停止（2 轮改善 + 2 轮容忍 + 1）
+    m, calls = make_stub(epochs=20, early_stop=2, valid_values=[1.0, 0.5] + [0.5] * 10)
+    m.Train(trainloader=[], validloader=[], testloader=[])
+    n_early = calls['train']
+    b_ok = n_early == 5
+
+    # 场景 C：两者都缺 → 显式报错
+    m, _ = make_stub(epochs=2, early_stop=1, valid_values=[1.0])
+    try:
+        m.Train(trainloader=[], validloader=None, testloader=None)
+        c_ok = False
+    except ValueError:
+        c_ok = True
+
+    detail = (f'无验证集跑满 {n_full} 轮={a_ok}；有验证集第 {n_early} 轮早停={b_ok}；'
+              f'两者全缺显式报错={c_ok}')
+    return (a_ok and b_ok and c_ok), detail
+
+
 # ---------------------------------------------------------------- 4. 端到端
 
 def test_end_to_end(strategy):
@@ -206,8 +292,8 @@ def main():
     ok, n_test = test_uniform_split_basic()
     record('uniform_split 比例/无泄漏/确定性', ok, f'测试电池 {n_test}/20')
     record('自然序排序正确', test_uniform_split_natural_order())
-    ids, spread_ok = test_uniform_split_spread()
-    record('测试电池均匀分散', spread_ok, f'抽取编号 {ids}')
+    ok, detail = test_uniform_split_spread()
+    record('测试电池均匀分散且无最小编号偏置', ok, detail)
 
     print('\n--- 已知缺陷 ---')
     ok, detail = test_lr_scheduler_constant_branch()
@@ -216,6 +302,8 @@ def main():
     record('LR_Scheduler 常规分支正常 warmup', ok, detail)
     ok, detail = test_logger_no_leak()
     record('logger 无 handler 累积', ok, detail)
+    ok, detail = test_train_early_stop_policy()
+    record('Train 早停策略（无验证集不早停 / 缺评估显式报错）', ok, detail)
 
     if '--e2e' in sys.argv:
         print('\n--- 端到端训练（XJTU 2C, 2 epoch）---')

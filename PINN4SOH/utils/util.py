@@ -25,7 +25,9 @@ def set_seed(seed=42, deterministic=True):
     """
     seed = int(seed)
     random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    # 注意：PYTHONHASHSEED 只对"进程启动前"设置生效，运行时再赋值不会改变
+    # 已启动解释器的哈希随机化，因此这里不写这一行，避免造成"已固定哈希种子"
+    # 的错觉。若确需逐位复现字典/集合迭代顺序，请在启动命令中设置该环境变量。
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -113,7 +115,9 @@ def write_to_txt(txt_name,txt):
     dir_name = os.path.dirname(txt_name)
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
-    with open(txt_name,'a') as f:
+    # [跨平台] 显式声明 utf-8：Windows 下 open() 默认使用 ANSI 代码页（GBK），
+    # 写入中文日志会与其它平台/工具产生编码不一致。
+    with open(txt_name, 'a', encoding='utf-8') as f:
         f.write(txt)
         f.write('\n')
 

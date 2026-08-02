@@ -295,42 +295,65 @@ class PINN(nn.Module):
         return loss1_meter.avg,loss2_meter.avg,loss3_meter.avg
 
     def Train(self,trainloader,testloader=None,validloader=None):
-        min_valid_mse = 10
-        valid_mse = 10
+        """
+        训练主循环。
+
+        [修复] 早停与"最优模型"的判定**只依赖验证集**：
+        - 提供 validloader：按验证集 MSE 选最优并存盘，连续无改善达 early_stop 次后停止；
+        - 未提供 validloader：不做早停（跑满 epochs），每轮刷新并保留最后一轮权重。
+
+        testloader 只用于评估与落盘预测，不参与任何选择决策 ——
+        原实现把"是否保存最优模型"绑定在 `testloader is not None` 上，导致
+        validloader 为 None 时 valid_mse 恒为初值、判定恒真、训练永不早停；
+        且"用测试集决定早停"本身属于测试集泄漏式调参。
+        """
+        if validloader is None and testloader is None:
+            raise ValueError('Train 至少需要 validloader 或 testloader 之一，否则无法评估')
+
+        min_valid_mse = float('inf')
         early_stop = 0
-        mae = 10
         for e in range(1,self.args.epochs+1):
-            early_stop += 1
             loss1,loss2,loss3 = self.train_one_epoch(e,trainloader)
             current_lr = self.scheduler.step()
             info = '[Train] epoch:{}, lr:{:.6f}, ' \
                    'total loss:{:.6f}'.format(e,current_lr,loss1+self.alpha*loss2+self.beta*loss3)
             self.logger.info(info)
-            if e % 1 == 0 and validloader is not None:
+
+            if validloader is not None:
                 valid_mse = self.Valid(validloader)
                 info = '[Valid] epoch:{}, MSE: {}'.format(e,valid_mse)
                 self.logger.info(info)
-            if valid_mse < min_valid_mse and testloader is not None:
-                min_valid_mse = valid_mse
-                true_label,pred_label = self.Test(testloader)
-                [MAE, MAPE, MSE, RMSE] = eval_metrix(pred_label, true_label)
-                info = '[Test] MSE: {:.8f}, MAE: {:.6f}, MAPE: {:.6f}, RMSE: {:.6f}'.format(MSE, MAE, MAPE, RMSE)
-                self.logger.info(info)
-                early_stop = 0
+                improved = valid_mse < min_valid_mse
+                if improved:
+                    min_valid_mse = valid_mse
+            else:
+                # 无验证集：不做早停，逐轮刷新（最终保留最后一轮权重）
+                improved = True
 
+            if improved:
+                early_stop = 0
                 ############################### save ############################################
                 self.best_model = {'solution_u':self.solution_u.state_dict(),
                                    'dynamical_F':self.dynamical_F.state_dict()}
-                if self.args.save_folder is not None:
-                    np.save(os.path.join(self.args.save_folder, 'true_label.npy'), true_label)
-                    np.save(os.path.join(self.args.save_folder, 'pred_label.npy'), pred_label)
+                if testloader is not None:
+                    true_label,pred_label = self.Test(testloader)
+                    [MAE, MAPE, MSE, RMSE] = eval_metrix(pred_label, true_label)
+                    info = '[Test] MSE: {:.8f}, MAE: {:.6f}, MAPE: {:.6f}, RMSE: {:.6f}'.format(MSE, MAE, MAPE, RMSE)
+                    self.logger.info(info)
+                    if self.args.save_folder is not None:
+                        np.save(os.path.join(self.args.save_folder, 'true_label.npy'), true_label)
+                        np.save(os.path.join(self.args.save_folder, 'pred_label.npy'), pred_label)
                 ##################################################################################
-            if self.args.early_stop is not None and early_stop > self.args.early_stop:
+            else:
+                early_stop += 1
+
+            if (self.args.early_stop is not None and validloader is not None
+                    and early_stop > self.args.early_stop):
                 info = 'early stop at epoch {}'.format(e)
                 self.logger.info(info)
                 break
         self.clear_logger()
-        if self.args.save_folder is not None:
+        if self.args.save_folder is not None and self.best_model is not None:
             torch.save(self.best_model,os.path.join(self.args.save_folder,'model.pth'))
 
 

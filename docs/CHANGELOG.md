@@ -64,5 +64,61 @@ XJTU 2C 跑 2 epoch 训练正常收敛（Test MAPE 0.61%）。
 python main_XJTU.py --batch 2C
 
 # 启用统一划分 + 可复现种子
-python main_XJTU.py --batch 2C --split_strategy uniform --seed 420
+python main_XJTU.py --batch 2C --split_strategy uniform --seed 42
 ```
+
+---
+---
+
+# 第二阶段：代码缺陷复查与文档一致性整改
+
+## 2026-08-02 — 代码缺陷修复与数据划分去偏置
+
+### 背景
+
+完成首轮修复后对代码做系统性复查，发现若干影响结论可靠性的实现缺陷：
+早停判据与测试集耦合、命令行开关实际无法关闭、统一划分存在固定位置偏置、测试中存在恒真断言。
+
+### 改动
+
+#### 1. 早停判据与测试集解耦（`PINN4SOH/Model/Model.py::Train`）
+- 早停与"最优模型"判定改为**只依赖验证集**；`testloader` 仅用于评估与落盘预测，
+  不再参与任何模型选择，消除测试集泄漏式调参。
+- 修复的具体缺陷：`validloader=None` 而 `testloader` 有效时，`valid_mse` 恒为初值 10、
+  判定条件恒真、`early_stop` 永远归零 → **训练永不早停并逐轮覆盖保存**。
+- `validloader` 与 `testloader` 同时缺失时显式抛 `ValueError`，不再静默退化。
+
+#### 2. 命令行开关修复（四个 `main_*.py`）
+- `--deterministic` 由 `type=bool` 改为 `argparse.BooleanOptionalAction`。
+  原写法下 `--deterministic False` 会被解析为 `True`（非空字符串即真），
+  等同于**无法从命令行关闭**确定性模式。
+
+#### 3. 统一数据划分去偏置（`PINN4SOH/utils/split.py`）
+- `uniform_split` 的测试索引由 `int(i * step)`（恒从索引 0 起算）改为取每段中点
+  `int((i + 0.5) * step)`。原实现使**每个划分单元中编号最小的电池恒定进入测试集**
+  （XJTU 6 个 batch 全部命中 1 号电池），构成系统性偏置。
+- 同步修正 docstring 中"符合原论文取 4/8 号意图"这一无依据表述，
+  并补充说明"划分单元仍由调用方决定"的适用范围与局限。
+
+#### 4. 其他健壮性修复（`PINN4SOH/utils/util.py`）
+- `write_to_txt` 显式声明 `encoding='utf-8'`（Windows 默认 ANSI 代码页）。
+- `set_seed` 移除运行时设置 `PYTHONHASHSEED` 的语句 —— 该变量只在进程启动前生效，
+  运行时赋值不产生任何效果，保留会造成"已固定哈希种子"的错觉。
+
+### 验证方式
+
+```bash
+cd PINN4SOH
+/d/APP/miniconda3/envs/main/python.exe verify_fixes.py          # 10/10 通过
+/d/APP/miniconda3/envs/main/python.exe verify_fixes.py --e2e    # 12/12 通过
+```
+
+新增回归项：早停策略三场景（无验证集须跑满 / 有验证集按容忍次数停止 / 两者全缺显式报错）；
+`uniform_split` 的断言由恒真的 `max(ids) <= 20` 替换为"不含最小编号 + 相邻间隔不超过 2 倍步长"。
+
+### 本次未改动
+
+`loss3` 仍使用 `.sum()` 而非 `.mean()`，尺度随 batch size 漂移。改 `.mean()` 会同时改变
+β 的标定，需重跑全部基线，单独排期。
+
+---

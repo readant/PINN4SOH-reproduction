@@ -39,8 +39,12 @@ def get_args():
                         choices=['legacy', 'uniform'],
                         help='legacy: 沿用原划分规则（保持历史基线不变）；'
                              'uniform: 使用 utils/split.py 的统一规则')
-    parser.add_argument('--deterministic', type=bool, default=True,
-                        help='是否强制 cuDNN 确定性算法。True 可逐位复现，但会略降训练速度')
+    # [修复] 原为 type=bool —— argparse 下 `--deterministic False` 会被解析为 True
+    # （非空字符串即真），等于无法从命令行关闭。改用 BooleanOptionalAction，
+    # 支持 --deterministic / --no-deterministic 显式开关。
+    parser.add_argument('--deterministic', action=argparse.BooleanOptionalAction, default=True,
+                        help='是否强制 cuDNN 确定性算法，默认开启（--no-deterministic 关闭）。'
+                             '开启可逐位复现，但会略降训练速度')
 
     parser.add_argument('--log_dir', type=str, default='logging.txt', help='log dir, if None, do not save')
     parser.add_argument('--save_folder', type=str, default='results/MIT results', help='save folder')
