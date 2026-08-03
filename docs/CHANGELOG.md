@@ -122,3 +122,40 @@ cd PINN4SOH
 β 的标定，需重跑全部基线，单独排期。
 
 ---
+
+## 2026-08-03 — 一键脚本链路修复与迁移学习接线
+
+### 改动
+
+#### 1. `PINN4SOH/run_all.py`
+- `_run_script()` 增加 `check=True` 与 `cwd` 参数：子进程失败不再被静默吞掉
+  （原实现不检查返回码，分析脚本全部失败仍会打印"完成"）。
+- `run_analyze()` 改为调用 `results_summary.py`。原实现调用的 `results analysis/*.py`
+  读取的是 `../results/Ours/<数据集> results/`（原作者提供的结果包，需解压且目录名匹配），
+  以 PINN4SOH 为 cwd 时路径必然解析失败。
+- 新增 `analyze-original` 阶段处理原作者结果包：先解压 `results/Ours/*.zip`，
+  再校验目录名，不匹配时给出明确指引并以非零状态结束。
+- `all` 阶段任一子阶段返回失败即中止后续阶段。
+
+#### 2. 迁移学习入口重命名
+- `main_adaptation - fine-tuning.py` → **`PINN4SOH/main_finetune.py`**。
+  原文件名含空格与连字符，Python 无法 import，只能 subprocess 调用，
+  导致 `run_all.py` 的 finetune 分支**长期是空操作**（只打印提示却照常返回）。
+- 新增 `run_standard_tasks()`（供 run_all 调用）与命令行入口：
+  `python main_finetune.py [standard|tju2xjtu|xjtu2tju|hust2mit|mit2hust|cross]`。
+
+#### 3. 冒烟测试对齐新能力（`PINN4SOH/smoke_test.py`）
+- 原实现硬编码 legacy 的子串划分（`'4' in f or '8' in f`）且不固定随机种子，
+  与仓库新增的可复现能力脱节。现改用 `uniform_split` + `set_seed(42)`，
+  并补充测试集加载与评估。
+
+### 验证方式
+
+```bash
+cd PINN4SOH
+python run_all.py analyze      # 退出码 0，生成 results/SUMMARY.md
+python main_finetune.py        # 正常进入标准四组迁移流程
+python smoke_test.py           # 1 epoch 冒烟通过
+```
+
+---

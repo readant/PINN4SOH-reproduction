@@ -1,3 +1,22 @@
+"""
+迁移学习（跨域微调）入口 —— 论文 Fig.6 / Table 4 对应实验
+==========================================================
+
+[重命名说明] 本文件原名 `main_adaptation - fine-tuning.py`。文件名含空格与连字符
+导致 Python 无法 import（只能 subprocess 调用，`run_all.py` 的 finetune 分支因此
+长期是空操作）。现重命名为 `main_finetune.py`，既可 import 也可直接运行。
+
+可直接运行的任务：
+    python main_finetune.py            # 标准四组（与 results_fine-tuning/ 已产出一一对应）
+    python main_finetune.py tju2xjtu   # 仅 TJU -> XJTU（6 batch x 10 次）
+    python main_finetune.py xjtu2tju   # 仅 XJTU -> TJU（3 batch x 10 次）
+    python main_finetune.py hust2mit   # 仅 HUST -> MIT
+    python main_finetune.py mit2hust   # 仅 MIT -> HUST
+    python main_finetune.py cross      # 跨化学体系 8 组（原 FineTune()，耗时长）
+
+结果写入 `results_fine-tuning/<源>-<目标>/`，由 `results_summary.py` 统一汇总。
+"""
+
 from Model.Model import PINN
 import torch
 import torch.nn as nn
@@ -301,9 +320,29 @@ def FineTune():
                 one_adaptation_task(args, source=source, target=target, source_batch=sb, target_batch=tb)
 
 
+def run_standard_tasks():
+    """运行标准四组迁移（供 run_all.py 的 finetune 阶段调用）。"""
+    for task in (FineTune_TJU2XJTU, FineTune_XJTU2TJU, FineTune_HUST2MIT, FineTune_MIT2HUST):
+        print(f'[finetune] {task.__name__}', flush=True)
+        task()
+
+
+TASKS = {
+    'tju2xjtu': FineTune_TJU2XJTU,
+    'xjtu2tju': FineTune_XJTU2TJU,
+    'hust2mit': FineTune_HUST2MIT,
+    'mit2hust': FineTune_MIT2HUST,
+    'cross': FineTune,
+}
+
+
 if __name__ == '__main__':
-    # FineTune_TJU2XJTU()
-    # FineTune_XJTU2TJU()
-    # FineTune_HUST2MIT()
-    # FineTune_MIT2HUST()
-    pass
+    import sys
+    name = sys.argv[1] if len(sys.argv) > 1 else 'standard'
+    if name == 'standard':
+        run_standard_tasks()
+    elif name in TASKS:
+        TASKS[name]()
+    else:
+        print(f'未知任务：{name}\n可选：standard, {", ".join(TASKS)}')
+        sys.exit(2)

@@ -1,8 +1,21 @@
-"""Smoke test for PINN4SOH - runs 1 epoch on XJTU 2C batch."""
+"""
+Smoke test for PINN4SOH - runs 1 epoch on XJTU 2C batch.
+
+用途：改动代码后快速确认「数据加载 → 模型构建 → 单轮训练 → 测试评估」链路完好。
+
+[修复] 原实现硬编码 legacy 的子串划分（`'4' in f or '8' in f`）且不固定随机种子，
+与本仓库新增的可复现能力脱节 —— 同一个脚本两次运行结果不可比。
+现统一改用 utils/split.py 的 uniform_split，并固定随机种子。
+"""
 import os
 import argparse
 from dataloader.dataloader import XJTUdata
 from Model.Model import PINN
+from utils.split import uniform_split, describe_split
+from utils.util import set_seed
+
+SEED = 42
+set_seed(SEED)
 
 args = argparse.Namespace()
 args.batch_size = 256
@@ -27,19 +40,13 @@ os.makedirs(args.save_folder, exist_ok=True)
 root = 'data/XJTU data'
 data = XJTUdata(root=root, args=args)
 
-train_list = []
-files = os.listdir(root)
-for file in files:
-    if args.batch in file:
-        if '4' in file or '8' in file:
-            pass  # skip test batteries
-        else:
-            train_list.append(os.path.join(root, file))
-
-print(f"Train files: {len(train_list)}")
-print(f"Files: {[os.path.basename(f) for f in train_list]}")
+files = [os.path.join(root, f) for f in os.listdir(root) if args.batch in f]
+train_list, test_list = uniform_split(files)
+print(describe_split(f'XJTU/{args.batch}', train_list, test_list))
+print(f"Train files: {[os.path.basename(f) for f in train_list]}")
 
 dataloader = data.read_all(specific_path_list=train_list)
+test_loader = data.read_all(specific_path_list=test_list)
 print(f"Train loader batches: {len(dataloader['train_2'])}")
 print(f"Valid loader batches: {len(dataloader['valid_2'])}")
 
@@ -53,6 +60,6 @@ print("\nTraining 1 epoch (smoke test)...")
 pinn.Train(
     trainloader=dataloader['train_2'],
     validloader=dataloader['valid_2'],
-    testloader=None
+    testloader=test_loader['test_3'],
 )
 print("\nSmoke test passed!")
