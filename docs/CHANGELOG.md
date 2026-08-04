@@ -159,3 +159,32 @@ python smoke_test.py           # 1 epoch 冒烟通过
 ```
 
 ---
+
+## 2026-08-04 — 新增结果汇总脚本（仓库唯一数据源）
+
+### 改动
+- 新增 `PINN4SOH/results_summary.py`：扫描 `results/` 与 `results_fine-tuning/` 下
+  所有含 `true_label.npy` + `pred_label.npy` 的实验目录，汇总为
+  `results/SUMMARY.md`（人读）与 `results/summary.csv`（机读）。
+
+### 动机
+
+仓库中存在两套结果目录：
+
+| 目录 | 归属 |
+|------|------|
+| `results/` | **本仓库实测**（本机训练产物） |
+| `results/Ours/`、`results analysis/processed results/` | **原作者提供**（对应论文数值） |
+
+前期文档混用了两者的数字，导致同一指标出现多个互相矛盾的取值
+（如 XJTU 上 MLP 的 MAPE 在仓库内曾同时存在 1.26% / 2.11% / 2.23% 三种写法）。
+
+### 约定
+- 逐个扫描实验目录，**不写死编号**；
+- MAPE 统一输出为百分比（×100），与论文口径一致；
+- 产物缺失的分组标注"无产物"，**不估计、不填充、不引用他处数字**。
+
+### 验证方式
+输出的四数据集 MAPE 与 `results/*.xlsx`、各 `Experiment*/` 原始产物逐项复核一致。
+
+---
