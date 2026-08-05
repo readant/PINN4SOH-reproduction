@@ -1,241 +1,183 @@
 # 07 - 论文方法与代码实现对应关系
 
-## 文件结构
+> 本文档对照**本仓库的真实代码**（`PINN4SOH/` 目录）与论文方法，逐项给出实现位置。
+> 文档中出现的每一个路径、类名、函数名都可在仓库中直接检索到。
+
+---
+
+## 一、仓库真实结构
 
 ```
 nc-PINN/
-├── src/
-│   ├── feature_extraction.py  ← 特征提取模块
-│   ├── model.py               ← PINN模型架构
-│   ├── loss.py                ← 三重损失函数
-│   ├── data_utils.py          ← 数据处理
-│   └── trainer.py             ← 训练流程
-├── demo.py                    ← 完整训练演示
-└── docs/                      ← 本文档
+├── README.md
+├── requirements.txt
+├── LICENSE                          # CC BY 4.0（继承自原始论文）
+├── docs/                            # 本套解读文档（01–14）
+├── PINN4SOH/                        # 论文官方代码（已迁移到 Python 3.12 + PyTorch 2.x）
+│   ├── Model/
+│   │   ├── Model.py                 # 核心：Sin / MLP / Predictor / Solution_u / LR_Scheduler / PINN
+│   │   └── Compare_Models.py        # 基线：ResBlock / MLP / CNN
+│   ├── dataloader/
+│   │   └── dataloader.py            # 基类 DF + XJTUdata / HUSTdata / MITdata / TJUdata
+│   ├── utils/
+│   │   ├── util.py                  # set_seed / get_logger / AverageMeter / eval_metrix / write_to_txt
+│   │   └── split.py                 # uniform_split / natural_key / describe_split / check_leakage
+│   ├── main_XJTU.py                 # XJTU 入口（6 个充放电协议 × 10 次）
+│   ├── main_HUST.py / main_MIT.py / main_TJU.py
+│   ├── main_comparision.py          # MLP / CNN 基线对比
+│   ├── main_finetune.py             # 迁移学习（原 main_adaptation - fine-tuning.py，已重命名）
+│   ├── run_all.py                   # 一键调度入口
+│   ├── results_summary.py           # 实验结果汇总（仓库唯一数据源生成器）
+│   ├── verify_fixes.py              # 修复回归验证（含端到端训练）
+│   ├── check_split.py               # 数据划分规则体检
+│   ├── check_consistency.py         # 文档-代码一致性校验
+│   ├── validate.py / smoke_test.py  # 快速验证 / 冒烟测试
+│   ├── results analysis/            # 原作者的结果分析脚本（处理 results/Ours/ 结果包）
+│   ├── plotter/                     # 论文插图：Figure 2 / 4a / 4b / 5 / 6
+│   ├── data/                        # 预处理后的四个数据集
+│   ├── results/                     # 实验产物（含 SUMMARY.md —— 唯一数据源）
+│   └── pretrained model/            # 预训练权重（11 个 .pth + 8 个 mu_var_pi_*.npz）
+└── Battery-dataset-preprocessing-code-library/   # 官方数据预处理代码库
 ```
 
-## 模块对应关系
+---
 
-### 1. 特征提取
+## 二、论文方法与代码对应表
 
-| 论文描述 | 代码文件 | 关键函数 |
+### 1. 特征提取（论文 §Method「通用特征提取」）
+
+| 论文描述 | 代码位置 | 关键实现 |
 |---------|---------|---------|
-| 截取电压区间 [V_end-0.2, V_end] | `feature_extraction.py` | `extract_features()` |
-| 截取电流区间 [0.1A, 0.5A] | `feature_extraction.py` | `extract_features()` |
-| 16个统计特征 | `feature_extraction.py` | `extract_features()` |
-| 特征归一化 | `feature_extraction.py` | `min_max_normalize()` |
+| 从充电末段提取特征 | `dataloader/dataloader.py` → `DF.read_one_csv()` | 截取电压区间、计算统计量 |
+| 16 个统计特征（8 电压 + 8 电流） | `DF.load_one_battery()` | 返回特征矩阵 |
+| 拼接周期序号构成网络输入 | `DF.load_all_battery()` | 输出 17 列 = 16 特征 + 1 周期序号 |
+| 归一化 | `DF.delete_3_sigma()` / `normalization_method` | `min-max` 或 `z-score` |
 
-```python
-# 论文: 从充电曲线提取16个统计特征
-# 代码: feature_extraction.py
+> **特征维度说明**：网络输入是 **17 维** = 16 个统计特征 + 1 个周期序号（cycle index）。
+> 在 `PINN.forward()` 中，前 16 列作为空间变量 `x`，最后一列作为时间变量 `t`。
+> 这一点在阅读代码时最容易误判（见 `Model.py` 的切片 `xt[:, 0:-1]` 与 `xt[:, -1:]`）。
 
-def extract_features(voltage, current, time, V_end=4.2):
-    # 截取电压区间
-    V_start = V_end - 0.2
-    mask_voltage = (voltage >= V_start) & (voltage <= V_end)
-    
-    # 截取电流区间
-    cv_mask = (current >= 0.1) & (current <= 0.5)
-    
-    # 提取8个电压特征 + 8个电流特征 = 16维
-    features = []
-    features.append(np.mean(v_selected))      # 1. mean
-    features.append(np.std(v_selected))       # 2. std
-    features.append(kurtosis(v_selected))     # 3. kurtosis
-    features.append(skew(v_selected))         # 4. skewness
-    features.append(charge_time)              # 5. charging time
-    features.append(accumulated_charge)       # 6. accumulated charge
-    features.append(slope_v)                  # 7. curve slope
-    features.append(entropy_v)                # 8. curve entropy
-    # ... 电流特征类似
-```
+### 2. 模型结构（论文 Fig.1c / §Method）
 
-### 2. PINN模型
+| 论文描述 | 代码位置 | 关键类 / 实现 |
+|---------|---------|--------------|
+| 解网络（估计 SOH 的网络） | `Model/Model.py` | **`Solution_u`**（内含 `MLP` 编码器 + `Predictor` 头） |
+| 动力学网络（拟合退化速率） | `Model/Model.py` | **`dynamical_F`**，类型为 `MLP(input_dim=35, ...)` |
+| 前向传播与自动微分 | `Model/Model.py` | `PINN.forward()`：`grad(u.sum(), t)` → `u_t`；`grad(u.sum(), x)` → `u_x` |
+| PDE 残差 | `Model/Model.py` | `f = u_t - F`，其中 `F = dynamical_F(cat([xt, u, u_x, u_t]))` |
+| 激活函数 | `Model/Model.py` | `Sin` 类（`torch.sin`），置于每个隐藏层后 |
 
-| 论文描述 | 代码文件 | 关键类/函数 |
-|---------|---------|------------|
-| 解网络 F(Φ) | `model.py` | `SolutionNetwork` |
-| 动力学网络 G(Θ) | `model.py` | `DynamicsNetwork` |
-| PDE约束 H = ∂F/∂t - G | `model.py` | `PINN.forward()` |
-| 自动微分计算梯度 | `model.py` | `torch.autograd.grad()` |
-| 微调模式 | `model.py` | `fine_tune_mode()` |
-
-```python
-# 论文: PINN由解网络和动力学网络组成
-# 代码: model.py
-
-class SolutionNetwork(nn.Module):
-    """解网络 F(Φ): 映射特征到SOH"""
-    def forward(self, t, x):
-        input_data = torch.cat([t, x], dim=1)  # t(1维) + x(16维)
-        u = self.network(input_data)            # 输出SOH
-        return u
-
-class DynamicsNetwork(nn.Module):
-    """动力学网络 G(Θ): 建模退化动力学"""
-    def forward(self, t, x, u, u_t, u_x):
-        input_data = torch.cat([t, x, u, u_t, u_x], dim=1)
-        g = self.network(input_data)            # 输出退化速率
-        return g
-
-class PINN(nn.Module):
-    def forward(self, t, x):
-        # 解网络前向传播
-        u = self.solution_net(t, x)
-        
-        # 自动微分计算梯度
-        u_t = torch.autograd.grad(u, t, ...)[0]  # ∂u/∂t
-        u_x = torch.autograd.grad(u, x, ...)[0]  # ∂u/∂x
-        
-        # 动力学网络
-        g = self.dynamics_net(t, x, u, u_t, u_x)
-        
-        # PDE约束
-        H = u_t - g  # 应该趋近于0
-        
-        return u, H, u_t, u_x
-```
-
-### 3. 损失函数
-
-| 论文公式 | 代码文件 | 关键函数 |
-|---------|---------|---------|
-| $L_{data} = \sum|u_i - \hat{u}_i|^2$ | `loss.py` | `data_loss()` |
-| $L_{PDE} = \sum|H_i|^2$ | `loss.py` | `pde_loss()` |
-| $L_{mono} = \sum_j\sum_k \text{ReLU}(\hat{u}_{k+1}-\hat{u}_k)$ | `loss.py` | `monotonicity_loss()` |
-| $L = L_{data} + \alpha L_{PDE} + \beta L_{mono}$ | `loss.py` | `total_loss()` |
-
-```python
-# 论文: 三重损失函数
-# 代码: loss.py
-
-def data_loss(predicted_u, true_u):
-    """L_data = Σ|u - ũ|²"""
-    return torch.mean((predicted_u - true_u) ** 2)
-
-def pde_loss(H):
-    """L_PDE = Σ|H|²"""
-    return torch.mean(H ** 2)
-
-def monotonicity_loss(predicted_u, cycle_indices, battery_ids):
-    """L_mono = Σ_j Σ_k ReLU(ũ_{k+1} - ũ_k)"""
-    # 按电池分组计算
-    for bat in torch.unique(battery_ids):
-        mask = (battery_ids == bat)
-        bat_u = predicted_u[mask]
-        # 同一电池内按周期排序后计算单调性
-        sorted_u = bat_u[torch.argsort(cycle_indices[mask])]
-        mono_loss += torch.mean(F.relu(sorted_u[1:] - sorted_u[:-1]))
-    return mono_loss / n_batteries
-
-def total_loss(predicted_u, true_u, H, cycle_indices, battery_ids, alpha, beta):
-    """总损失"""
-    L_data = data_loss(predicted_u, true_u)
-    L_pde = pde_loss(H)
-    L_mono = monotonicity_loss(predicted_u, cycle_indices, battery_ids)
-    return L_data + alpha * L_pde + beta * L_mono
-```
-
-### 4. 数据处理
-
-| 论文描述 | 代码文件 | 关键函数 |
-|---------|---------|---------|
-| 合成数据生成 | `data_utils.py` | `generate_synthetic_data()` |
-| 按电池划分数据集 | `data_utils.py` | `split_data()` |
-| Dataset封装 | `data_utils.py` | `BatteryDataset` |
-| DataLoader创建 | `data_utils.py` | `create_dataloader()` |
-
-```python
-# 论文: 训练集/验证集/测试集按6:2:2划分
-# 代码: data_utils.py
-
-def split_data(cycles, features, soh, battery_ids, ...):
-    """按电池级别划分，确保同一电池不跨集合"""
-    unique_batteries = np.unique(battery_ids)
-    # 按电池比例划分
-    train_bats = unique_batteries[:n_train]
-    val_bats = unique_batteries[n_train:n_train+n_val]
-    test_bats = unique_batteries[n_train+n_val:]
-    ...
-```
-
-### 5. 训练流程
-
-| 论文描述 | 代码文件 | 关键方法 |
-|---------|---------|---------|
-| 训练循环 | `trainer.py` | `PINNTrainer.train()` |
-| 验证评估 | `trainer.py` | `PINNTrainer.validate()` |
-| 测试评估 | `trainer.py` | `PINNTrainer.test()` |
-| 微调训练 | `trainer.py` | `PINNTrainer.fine_tune()` |
-| 早停机制 | `trainer.py` | `train()` 内部实现 |
-| 模型保存 | `trainer.py` | `torch.save()` |
-
-```python
-# 论文: 训练过程包含早停和模型保存
-# 代码: trainer.py
-
-class PINNTrainer:
-    def train(self, train_loader, val_loader, epochs, alpha, beta, 
-              early_stopping_patience, save_path):
-        best_val_rmse = float('inf')
-        patience_counter = 0
-        
-        for epoch in range(epochs):
-            # 训练
-            train_loss, _ = self.train_epoch(train_loader, alpha, beta)
-            
-            # 验证
-            if (epoch + 1) % 10 == 0:
-                val_metrics = self.validate(val_loader)
-                
-                # 早停检查
-                if val_metrics['RMSE'] < best_val_rmse:
-                    best_val_rmse = val_metrics['RMSE']
-                    patience_counter = 0
-                    torch.save(self.model.state_dict(), save_path)
-                else:
-                    patience_counter += 1
-                    if patience_counter >= early_stopping_patience:
-                        break
-```
-
-## 代码运行流程
+**实际网络尺寸**
 
 ```
-demo.py
-  │
-  ├── 1. generate_synthetic_data()
-  │       └── 生成合成电池退化数据
-  │
-  ├── 2. split_data()
-  │       └── 按电池级别划分数据集
-  │
-  ├── 3. compute_normalization_params() + min_max_normalize()
-  │       └── 特征归一化
-  │
-  ├── 4. BatteryDataset() + create_dataloader()
-  │       └── 构建数据加载器
-  │
-  ├── 5. PINN()
-  │       └── 创建PINN模型
-  │
-  ├── 6. PINNTrainer() + train()
-  │       └── 训练模型（含早停）
-  │
-  ├── 7. test()
-  │       └── 测试评估
-  │
-  └── 8. plot_results()
-          └── 可视化结果
+Solution_u
+├── encoder  : MLP(input_dim=17, output_dim=32, layers_num=3, hidden_dim=60, dropout=0.2)
+│              → 结构为 17 → 60 → 60 → 32，激活全部为 Sin
+└── predictor: Predictor(input_dim=32) → Dropout(0.2) → Linear(32→32) → Sin → Linear(32→1)
+
+dynamical_F  : MLP(input_dim=35, output_dim=1, layers_num=3, hidden_dim=60)
+               → 输入为 concat(x[16], t[1], u[1], u_x[16], u_t[1]) = 35 维
 ```
 
-## 已修复的问题
+> **符号提示**：论文正文中 <i>F</i> 指动力学方程、<i>u</i> 指 SOH。
+> 代码里 **`dynamical_F` 对应方程 F**，**`Solution_u` 对应解 u** ——
+> 不要写成"解网络 F"，历史文档曾有此误。
 
-| 问题 | 修复内容 |
-|------|---------|
-| loss.py导入顺序 | `import numpy` 移到文件开头 |
-| 单调性损失跨电池 | 改为按battery_ids分组计算 |
-| 特征未归一化 | 添加特征和周期归一化 |
-| 数据泄露 | split_data改为按电池级别划分 |
-| 合成数据特征弱 | 增强特征-SOH耦合强度 |
-| PDE权重过大 | α从1.0降为0.1 |
+### 3. 损失函数（论文 §Method「Loss function」）
+
+| 论文描述 | 代码位置 | 实现 |
+|---------|---------|------|
+| 数据损失 L_data | `Model/Model.py` → `PINN.train_one_epoch()` | `loss1 = 0.5·MSE(u1, y1) + 0.5·MSE(u2, y2)` |
+| PDE 残差损失 L_PDE | 同上 | `loss2 = 0.5·MSE(f1, 0) + 0.5·MSE(f2, 0)` |
+| 物理（容量再生）约束 | 同上 | `loss3 = relu((u2-u1)·(y1-y2)).sum()` |
+| 总损失 | 同上 | `loss = loss1 + alpha·loss2 + beta·loss3` |
+
+**关于 loss3 的准确表述**：它约束的是"预测的变化方向与真实变化方向一致" ——
+当真实 SOH 下降（y1 > y2）时预测也必须下降，反之亦然；两者方向相反则被惩罚。
+因此它不是"单调递减约束"，而是**允许容量再生**的方向一致性软约束。
+另需注意此项用 `.sum()` 而非 `.mean()`，其量级随 batch size 漂移（见 §五）。
+
+### 4. 训练策略（论文 §Method「Training」）
+
+| 论文描述 | 代码位置 | 实现 |
+|---------|---------|------|
+| 两套优化器 | `Model/Model.py` → `PINN.__init__` | `optimizer1`（解网络）、`optimizer2`（动力学网络） |
+| 学习率 warmup + 余弦衰减 | `Model/Model.py` | `LR_Scheduler`（warmup 段线性、衰减段余弦） |
+| 早停 | `Model/Model.py` → `PINN.Train()` | 依据**验证集 MSE** 选最优并早停 |
+| 最优模型保存 | `PINN.Train()` | `model.pth` + `true_label.npy` / `pred_label.npy` |
+| 模型加载 | `PINN.load_model()` | `torch.load(..., weights_only=True)` |
+
+### 5. 迁移学习（论文 Fig.6）
+
+| 论文描述 | 代码位置 | 实现 |
+|---------|---------|------|
+| 源域预训练 + 目标域微调 | `main_finetune.py` | `class AdaPINN(PINN)` → `Adaptation()` |
+| 单次迁移任务 | `main_finetune.py` | `one_adaptation_task(args, source, target, ...)` |
+| 四组标准迁移 | `main_finetune.py` | `FineTune_TJU2XJTU / FineTune_XJTU2TJU / FineTune_HUST2MIT / FineTune_MIT2HUST` |
+| 跨化学体系 8 组 | `main_finetune.py` | `FineTune()` |
+
+### 6. 基线对比（论文 Table 2）
+
+| 论文描述 | 代码位置 | 实现 |
+|---------|---------|------|
+| MLP 基线 | `Model/Compare_Models.py` | `class MLP` |
+| CNN 基线 | `Model/Compare_Models.py` | `class CNN`（含 `ResBlock`） |
+| 对比实验入口 | `main_comparision.py` | 通过 `setattr(args, 'model', 'MLP'/'CNN')` 切换 |
+
+### 7. 结果分析与绘图
+
+| 论文描述 | 代码位置 | 实现 |
+|---------|---------|------|
+| Table 各数据集指标 | `results analysis/{XJTU,HUST,MIT,TJU} results.py` | `class Results`（输出 `.xlsx`） |
+| Table 2 方法对比 | `results analysis/Comparision results.py` | `class Results` |
+| Fig.2 / 4a / 4b / 5 / 6 | `plotter/Figure *.py` | 需配合 `plotter/color.py` 配色 |
+| **本仓库实验结果汇总** | `results_summary.py` | 生成 `results/SUMMARY.md`（仓库唯一数据源） |
+
+---
+
+## 三、入口脚本与产物对应关系
+
+| 入口 | 产物目录 | 实验规模 |
+|------|---------|---------|
+| `main_XJTU.py` | `results/XJTU results/{0-0 … 5-5}/Experiment{1..10}` | 60 次 |
+| `main_HUST.py` | `results/HUST results/Experiment{1..10}` | 10 次 |
+| `main_MIT.py` | `results/MIT results/Experiment{1..10}` | 10 次 |
+| `main_TJU.py` | `results/TJU results/{0-0,1-1,2-2}/Experiment{1..10}` | 30 次 |
+| `main_comparision.py` | `results/XJTU-MLP results/`、`results/XJTU-CNN results/` | 60 + 60 次 |
+| `main_finetune.py` | `results_fine-tuning/<源>-<目标>/` | 标准四组共 110 次 |
+| `results_summary.py` | `results/SUMMARY.md`、`results/summary.csv` | 汇总以上全部 |
+
+> **工作目录约束**：所有 `main_*.py` 与汇总脚本都假设 **cwd = `PINN4SOH/`**，
+> 内部使用 `data/...`、`results/...` 等相对路径。
+> `results analysis/*.py` 是例外，它们假设 **cwd = `results analysis/`**（用 `../results/...`）。
+> 从错误目录运行会因路径解析失败而报错。
+
+---
+
+## 四、论文声明与本仓库实测的对照
+
+实测值来自 `results/SUMMARY.md`（由 `results_summary.py` 从原始产物生成）。
+
+| 结论 | 论文 | 本仓库实测 | 判定 |
+|------|------|-----------|------|
+| XJTU MAPE | 0.78% | 0.87 ± 0.25% | 接近，偏差 +0.09 pp |
+| HUST MAPE | 0.65% | 0.80 ± 0.02% | 接近，偏差 +0.15 pp |
+| MIT MAPE | 0.78% | 0.73 ± 0.04% | 接近，偏差 −0.05 pp |
+| TJU MAPE | 1.21% | 1.13 ± 0.29% | 接近，偏差 −0.08 pp |
+| PINN 优于 MLP/CNN | 报告为显著优势 | XJTU 上 0.87% vs 2.23% / 2.53% | 一致 |
+| 迁移学习有效 | 微调显著降低跨域误差 | TJU→XJTU：1.03%（源域直测约 11%） | 一致 |
+
+**完整实测表以 `results/SUMMARY.md` 为准**，本文不复制全部数字，避免再次出现多处数值不一致。
+
+---
+
+## 五、阅读代码时的已知陷阱
+
+1. **输入维度**：`xt` 是 17 列（16 特征 + 1 周期序号），不是 16 列。
+2. **F/G 命名**：代码里只有 `dynamical_F`，没有名为 G 的网络；论文中的 G 与代码的 F 指同一对象。
+3. **`loss3` 用 `.sum()`**：损失量级随 batch size 变化，更换 batch size 后 `beta` 需重新标定。
+4. **早停判据**：只依据验证集；`testloader` 仅用于评估，不参与模型选择。
+5. **数据划分**：四个数据集各有一套 legacy 规则（默认）；`--split_strategy uniform` 可切换到
+   `utils/split.py` 的统一规则，但**切换划分等价于更换实验条件**，不可与已有基线直接对比。
+6. **结果目录有两套**：`results/`（本仓库实测）与 `results/Ours/`（原作者提供的结果包，需解压）；
+   `results analysis/*.py` 读取的是后者，`results_summary.py` 读取的是前者。**两者不可混用。**

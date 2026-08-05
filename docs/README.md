@@ -15,8 +15,20 @@
 | [03-pinn-architecture.md](03-pinn-architecture.md) | PINN模型架构设计 |
 | [04-loss-functions.md](04-loss-functions.md) | 三重损失函数 |
 | [05-training-strategy.md](05-training-strategy.md) | 训练与迁移学习策略 |
-| [06-experiments.md](06-experiments.md) | 实验验证与结果分析 |
+| [06-experiments.md](06-experiments.md) | 实验结果与结论 |
 | [07-code-mapping.md](07-code-mapping.md) | 论文方法与代码实现对应关系 |
+| [08-verification-guide.md](08-verification-guide.md) | 完整验证流程（环境 → 实验 → 汇总） |
+| [09-data-preprocessing.md](09-data-preprocessing.md) | 数据预处理与 CSV 格式 |
+| [10-training-configs.md](10-training-configs.md) | 各数据集训练配置 |
+| [11-transfer-learning.md](11-transfer-learning.md) | 迁移学习机制 |
+| [12-visualization.md](12-visualization.md) | 结果可视化 |
+| [13-checklist.md](13-checklist.md) | 验证检查清单 |
+| [14-verification-report.md](14-verification-report.md) | 环境迁移验证报告 |
+| [CHANGELOG.md](CHANGELOG.md) | 改动记录（动机 / 文件清单 / 验证方式） |
+| [GIT_USAGE.md](GIT_USAGE.md) | Git 仓库使用说明 |
+
+> **数据源纪律**：涉及实验数字的文档，一律以 `PINN4SOH/results/SUMMARY.md` 为准
+> （由 `results_summary.py` 从原始产物生成）。
 
 ---
 
@@ -37,7 +49,9 @@
 
 ## 关键数字
 
-- **MAPE**: 0.87%（4个数据集平均）
-- **数据规模**: 387个电池，310,705个样本
-- **特征维度**: 16维（从充电曲线提取）
-- **模型结构**: 解网络F + 动力学网络G
+| 项目 | 数值 | 说明 |
+|------|------|------|
+| MAPE | 论文 0.87% / 本仓库实测 **0.88%** | 四数据集平均；实测见 `PINN4SOH/results/SUMMARY.md` |
+| 数据规模 | **387** 只电池、310,705 个样本 | 与论文口径一致 |
+| 网络输入维度 | **17** | 16 个统计特征 + 1 个周期序号 |
+| 模型结构 | 解网络 `Solution_u` + 动力学网络 `dynamical_F` | 代码中没有名为 G 的网络 |

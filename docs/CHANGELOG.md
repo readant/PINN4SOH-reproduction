@@ -188,3 +188,41 @@ python smoke_test.py           # 1 epoch 冒烟通过
 输出的四数据集 MAPE 与 `results/*.xlsx`、各 `Experiment*/` 原始产物逐项复核一致。
 
 ---
+
+## 2026-08-05 — 文档与代码一致性整改
+
+### 背景
+
+多篇文档描述的是**仓库中并不存在**的实现：虚构的 `src/` 目录结构、
+`SolutionNetwork` / `DynamicsNetwork` 类、`BatteryDataPreprocessor` 类、
+`extract_features_from_charge()` 函数，以及 `data/*/processed/` 目录约定。
+这些内容对读者具有误导性，且无法通过任何校验。
+
+### 改动
+
+| 文件 | 改动 |
+|------|------|
+| `docs/07-code-mapping.md` | **重写**。改为对照真实目录结构与类名（`Solution_u` / `dynamical_F` / `DF` / `AdaPINN`），逐条给出论文方法与代码位置的映射 |
+| `docs/08-verification-guide.md` | **重写并更名**（原 `08-reproduction-guide.md`）。改为可执行的验证流程：环境 → 干跑校验 → 冒烟 → 端到端 → 结果汇总 → 论文比对 |
+| `docs/09-data-preprocessing.md` | **重写**。删除虚构类与函数，改为真实预处理链路（官方预处理库 → CSV → `DF.read_one_csv` 五步），并显式标出"min-max 归一化区间是 [-1,1] 而非 [0,1]"这一易错点 |
+| `docs/13-checklist.md` | **重写**。由"从零复现清单"改为本项目可执行的验证检查清单 |
+| `docs/03-pinn-architecture.md` | 修正网络结构为 **17 → 60 → 60 → 32**（原写 64→64→32）；符号更正为 `Solution_u` / `dynamical_F`；移除并不存在的 Sigmoid 输出层；更正 PDE 残差为 `f = u_t − F` |
+| `docs/04-loss-functions.md` | 更正 PDE 公式、`L_data` 的成对结构与 0.5 系数、`loss3` 的真实语义（方向一致性，允许容量再生，非单调递减）；补充四个数据集 α/β 的实际默认值 |
+| `docs/14-verification-report.md` | **更名**（原 `14-reproduction-report.md`）并更新实验规模表与数据源声明 |
+| `docs/README.md` | 索引补全 08–14 与 CHANGELOG / GIT_USAGE；关键数字表更正 |
+
+### 新增
+
+- `PINN4SOH/check_consistency.py`：自动校验
+  ① 文档中引用的 `.py` 是否真实存在；② `data/` 数据集文件数与口径是否一致；
+  ③ 关键代码事实（类名、`--seed` 默认值、`BooleanOptionalAction`、`main_finetune.py`）；
+  ④ 是否残留已废弃的类名/函数名；⑤ 文档中的实测数字能否在 `results/SUMMARY.md` 溯源。
+
+### 验证方式
+
+```bash
+cd PINN4SOH
+python check_consistency.py      # 6/6 通过
+```
+
+---

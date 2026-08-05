@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static-check:
+    name: 语法检查与文档一致性校验
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 语法检查（全仓库 .py）
+        run: |
+          cd PINN4SOH
+          python -m compileall -q . 2>&1 | tee /tmp/compile.log
+          echo "语法检查通过"
+
+      - name: 文档-代码一致性校验
+        run: |
+          cd PINN4SOH
+          python check_consistency.py
+
+      - name: 数据划分规则体检
+        run: |
+          cd PINN4SOH
+          python check_split.py
+
+  note:
+    name: 说明
+    runs-on: ubuntu-latest
+    steps:
+      - name: 需要 GPU 的校验项不在 CI 中运行
+        run: |
+          echo "verify_fixes.py 与 smoke_test.py 依赖 PyTorch 与 GPU，未纳入 CI。"
+          echo "请在本地环境执行："
+          echo "  cd PINN4SOH"
+          echo "  python verify_fixes.py        # 期望 10/10"
+          echo "  python verify_fixes.py --e2e  # 期望 12/12"

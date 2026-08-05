@@ -1,5 +1,22 @@
 # PINN4SOH
 
+> ### 本仓库补充说明（阅读下方官方文档前请先看这里）
+>
+> 本文件是**原作者提供的英文 README**，此处保留原文以便与上游对照。
+> 本仓库对其代码做了环境迁移与缺陷修复，因此下列描述与实际状态存在差异：
+>
+> | 原 README 的说明 | 本仓库实际情况 |
+> |-----------------|---------------|
+> | Python 3.7.10 + PyTorch 1.7.1 | 已迁移到 **Python 3.12 + PyTorch 2.x（CUDA）** |
+> | `conda create -n new_environment python=3.7.10` | 本仓库使用 conda 环境 `main` |
+> | `main_comparison.py` | 实际文件名为 **`main_comparision.py`**（原作者文件名拼写如此，未改动以保持与上游一致） |
+> | `main_adaptation - fine-tuning.py` | 已重命名为 **`main_finetune.py`**（原文件名含空格与连字符，无法被 import） |
+> | 运行 `results analysis/XJTU results.py` 处理结果 | 该脚本读取 `../results/Ours/...`（**原作者提供**的结果包，需先解压）；汇总**本仓库实测**结果请用 `python results_summary.py` |
+> | 数据集为预处理后的 CSV | 本仓库 `data/` 下共 387 个 CSV，来源与许可见 `data/README.md` |
+>
+> 新增的一键入口、验证脚本与文档索引，请见仓库根目录 `README.md` 与
+> `docs/08-verification-guide.md`、`docs/CHANGELOG.md`。
+
 This code is for our paper: [Physics-informed neural network for lithium-ion battery degradation stable modeling and prognosis](https://www.nature.com/articles/s41467-024-48779-z)
 
 > [!IMPORTANT]

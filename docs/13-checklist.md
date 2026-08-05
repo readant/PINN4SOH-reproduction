@@ -1,214 +1,115 @@
-# 13 - 复现检查清单
+# 13 - 验证检查清单
+
+> 本清单对应本项目的实际工作方式：**在论文官方代码基础上完成环境迁移与缺陷修复，
+> 并验证论文核心结论在新环境下依然成立**。
+> 每一项都可执行、可核对；命令默认在 `PINN4SOH/` 目录下运行。
+
+---
 
 ## 阶段一：环境准备
 
-- [ ] 安装Python 3.8+
-- [ ] 安装PyTorch
-- [ ] 安装scipy, numpy, pandas, matplotlib
-- [ ] 创建虚拟环境
-- [ ] 克隆/下载论文代码（如有）
+- [ ] Python 3.12+
+- [ ] PyTorch 2.x（CUDA 版本，需能识别 GPU）
+- [ ] 安装依赖：`pip install -r ../requirements.txt`
+- [ ] 确认环境可用：
+      `python -c "import torch; print(torch.__version__, torch.cuda.is_available())"`
+      → 期望输出 `2.x.x+cuXXX True`
+
+> 注意：本机的 managed Python 3.13.12 未安装 torch，不能用于训练。
+> 项目实际运行环境为 conda 环境 `main`（torch 2.11.0+cu128）。
 
 ---
 
-## 阶段二：数据准备
+## 阶段二：代码与数据就位
 
-### 下载数据
-
-- [ ] 下载MIT数据集
-- [ ] 下载HUST数据集
-- [ ] 下载TJU数据集
-- [ ] 下载XJTU数据集
-- [ ] 验证数据完整性
-
-### 数据预处理
-
-- [ ] 实现 `extract_features_from_charge()` 函数
-- [ ] 实现 `BatteryDataPreprocessor` 类
-- [ ] 处理MIT数据集
-- [ ] 处理HUST数据集
-- [ ] 处理TJU数据集
-- [ ] 处理XJTU数据集
-- [ ] 验证特征维度正确 (16维)
-- [ ] 验证SOH范围正确 (0.7~1.0)
-- [ ] 检查NaN/Inf值
-
-### 数据存储
-
-- [ ] 创建 `data/MIT/processed/` 目录
-- [ ] 创建 `data/HUST/processed/` 目录
-- [ ] 创建 `data/TJU/processed/` 目录
-- [ ] 创建 `data/XJTU/processed/` 目录
-- [ ] 保存features.npy, soh.npy, cycles.npy, battery_ids.npy
+- [ ] `PINN4SOH/` 下四个数据集目录存在：
+      `data/XJTU data`(55)、`data/HUST data`(77)、`data/MIT data`(125)、`data/TJU data`(130)
+      —— 合计 387 个 CSV，与论文「387 只电池」一致
+- [ ] 预训练权重存在：`pretrained model/` 下 11 个 `.pth` + 8 个 `mu_var_pi_*.npz`
+- [ ] 数据集来源与许可已确认（各数据集条款不同，见根 README「数据集」小节）
+- [ ] 从正确的目录运行：所有 `main_*.py` 与汇总脚本必须在 `PINN4SOH/` 下执行
 
 ---
 
-## 阶段三：模型实现
+## 阶段三：修复项确认（逐条对应 `docs/CHANGELOG.md`）
 
-### 特征提取模块
-
-- [ ] 实现16维特征提取
-- [ ] 验证电压区间截取正确
-- [ ] 验证电流区间截取正确
-- [ ] 测试边界情况
-
-### PINN模型
-
-- [ ] 实现SolutionNetwork (解网络F)
-- [ ] 实现DynamicsNetwork (动力学网络G)
-- [ ] 实现PINN主类
-- [ ] 验证自动微分计算正确
-- [ ] 验证PDE约束H计算正确
-
-### 损失函数
-
-- [ ] 实现data_loss (MSE)
-- [ ] 实现pde_loss (PDE残差)
-- [ ] 实现monotonicity_loss (按电池分组)
-- [ ] 实现total_loss (加权组合)
-- [ ] 验证损失值计算正确
-
-### 训练器
-
-- [ ] 实现PINNTrainer类
-- [ ] 实现train_epoch()方法
-- [ ] 实现validate()方法
-- [ ] 实现test()方法
-- [ ] 实现fine_tune()方法
-- [ ] 实现早停机制
-- [ ] 实现模型保存/加载
+- [ ] 可复现性：`utils/util.py::set_seed` 存在，四个 `main_*.py` 均有 `--seed`
+- [ ] 统一划分：`utils/split.py::uniform_split` 存在，四个 main 均有 `--split_strategy`
+- [ ] `LR_Scheduler.step()` 在 constant 分支下不再抛 `UnboundLocalError`
+- [ ] `PINN.load_model()` 使用 `torch.load(..., weights_only=True)`
+- [ ] `get_logger` 重复调用不再累积 handler
+- [ ] 早停判据只依据验证集，`testloader` 不参与模型选择
+- [ ] `--deterministic` 可通过 `--no-deterministic` 关闭（原 `type=bool` 写法无法关闭）
+- [ ] `write_to_txt` 显式使用 `encoding='utf-8'`
+- [ ] 迁移学习入口 `main_finetune.py` 可直接 import / 直接运行
 
 ---
 
-## 阶段四：基础实验
+## 阶段四：自动化验证（推荐每次改动后执行）
 
-### 数据加载
-
-- [ ] 实现RealBatteryDataset类
-- [ ] 实现按电池级别划分
-- [ ] 实现特征归一化
-- [ ] 实现周期归一化
-- [ ] 验证数据加载正确
-
-### 单数据集训练
-
-- [ ] 在XJTU上训练 (batch 1)
-- [ ] 在XJTU上训练 (batch 2)
-- [ ] 在XJTU上训练 (batch 3)
-- [ ] 在XJTU上训练 (batch 4)
-- [ ] 在TJU上训练
-- [ ] 在HUST上训练
-- [ ] 在MIT上训练
-
-### 结果验证
-
-- [ ] 计算MAE, MAPE, RMSE
-- [ ] 与论文Table 2对比
-- [ ] 验证MAPE < 2.0% (可接受范围)
+- [ ] `python verify_fixes.py`　　　　　　　→ **10/10 通过**
+- [ ] `python verify_fixes.py --e2e`　　　　→ **12/12 通过**（含 XJTU 2C 两种划分各 2 epoch 训练）
+- [ ] `python check_split.py`　　　　　　　 → 打印 legacy / uniform 划分对照
+- [ ] `python check_consistency.py`　　　　→ 文档中引用的路径 / 类名 / 声明与代码一致
+- [ ] `python smoke_test.py`　　　　　　　 → 1 epoch 冒烟通过，退出码 0
+- [ ] `python results_summary.py`　　　　  → 生成 `results/SUMMARY.md`
 
 ---
 
-## 阶段五：对比实验
+## 阶段五：实验结果核对
 
-### 基线模型
+- [ ] `python run_all.py analyze` 正常退出（退出码 0）
+- [ ] `results/SUMMARY.md` 中四数据集 MAPE 与论文偏差在 ±0.2 pp 以内
+- [ ] XJTU 六个协议各自 MAPE 均已记录（不遗漏 batch）
+- [ ] 基线对比（MLP / CNN）与本仓库 PINN 在同一划分下对比
+- [ ] 迁移学习四组的源域直测 / 微调后指标均已记录
 
-- [ ] 实现MLP模型
-- [ ] 实现CNN模型
-- [ ] 确保参数量与PINN相同
-
-### 多次重复实验
-
-- [ ] 实现随机种子设置
-- [ ] 在每个数据集上运行10次
-- [ ] 计算均值和标准差
-- [ ] 生成误差棒图
+> **数据源纪律**：仓库内任何文档引用实验数字时，一律以 `results/SUMMARY.md` 为准。
+> `results analysis/processed results/*.xlsx` 是**原作者提供**的结果（对应论文数值），
+> 与本仓库实测不是同一套数据，不可混用。
 
 ---
 
-## 阶段六：高级实验
+## 阶段六：可复现性检查
 
-### 小样本实验
-
-- [ ] 实现1电池训练
-- [ ] 实现2电池训练
-- [ ] 实现3电池训练
-- [ ] 实现4电池训练
-- [ ] 实现5电池训练
-- [ ] 生成Fig.5
-
-### 迁移学习实验
-
-- [ ] 实现预训练流程
-- [ ] 实现微调流程
-- [ ] 冻结G(Θ)验证
-- [ ] 运行XJTU→TJU迁移
-- [ ] 运行TJU→XJTU迁移
-- [ ] 运行HUST→MIT迁移
-- [ ] 运行MIT→HUST迁移
-- [ ] 生成Fig.6
+- [ ] 固定 `--seed` 后，两次运行的初始权重逐位一致（`verify_fixes.py` 已覆盖）
+- [ ] 多次实验使用 `seed + e` 递增，而非全部使用同一种子（否则均值无统计意义）
+- [ ] 更换 `--split_strategy` 时，明确标注该结果使用了哪套划分
+- [ ] 记录运行环境（torch 版本、GPU 型号），写入实验日志
 
 ---
 
-## 阶段七：可视化与论文对标
+## 阶段七：交付前检查
 
-### 图表生成
-
-- [ ] 生成Fig.4: SOH预测散点图
-- [ ] 生成Fig.4b: 误差分布对比
-- [ ] 生成Fig.5: 小样本实验
-- [ ] 生成Fig.6: 迁移学习
-
-### 结果表格
-
-- [ ] 生成Table 2
-- [ ] 生成Table 3 (小样本)
-- [ ] 生成Table 4 (迁移)
-
-### 最终验证
-
-- [ ] 所有图表格式正确
-- [ ] 所有数值与论文接近
-- [ ] 所有结论可复现
+- [ ] `git status` 无未跟踪的临时产物（`results/verify_fixes_*`、`*_logger_probe.txt` 等应被忽略）
+- [ ] 文档中出现的每个数字都能在 `results/SUMMARY.md` 或论文中找到出处
+- [ ] 文档中出现的每个文件路径、类名在仓库中真实存在（`check_consistency.py` 已覆盖）
+- [ ] `docs/CHANGELOG.md` 已记录本次改动（动机 / 文件清单 / 验证方式 / 未改动项）
 
 ---
 
-## 常见问题检查
+## 常见问题排查
 
-### 数据问题
+### 数据相关
 
-- [ ] 检查充电数据是否完整
-- [ ] 检查SOH计算是否正确
-- [ ] 检查特征是否包含NaN/Inf
+- [ ] 充电段数据是否完整（特征提取依赖充电末段）
+- [ ] SOH 是否落在合理区间（约 0.7 ~ 1.0）
+- [ ] 特征中是否含 NaN / Inf（`DF.delete_3_sigma()` 负责剔除异常点）
 
-### 模型问题
+### 模型相关
 
-- [ ] 检查模型是否收敛
-- [ ] 检查预测值范围是否合理 (0.7~1.0)
-- [ ] 检查单调性是否满足
+- [ ] 训练是否收敛（观察 `logging.txt` 中 loss 曲线）
+- [ ] 预测值范围是否合理
+- [ ] PDE 残差是否随训练下降（`loss2` 应持续减小）
 
-### 训练问题
+### 训练相关
 
-- [ ] 检查学习率是否合适
-- [ ] 检查loss是否下降
-- [ ] 检查是否过拟合
+- [ ] 学习率是否合适（warmup + 余弦衰减，见 `LR_Scheduler`）
+- [ ] 是否触发早停（`early stop at epoch N`）
+- [ ] 是否过拟合（比较 valid MSE 与 test 指标走势）
 
----
+### 路径相关
 
-## 代码质量检查
-
-### 代码规范
-
-- [ ] 添加必要的注释
-- [ ] 使用有意义的变量名
-- [ ] 函数文档完整
-
-### 测试
-
-- [ ] 单元测试特征提取
-- [ ] 单元测试损失函数
-- [ ] 集成测试训练流程
-
-### 文档
-
-- [ ] README.md完整
-- [ ] 安装说明清晰
-- [ ] 使用示例完整
+- [ ] 报 `FileNotFoundError: data/...` → 当前不在 `PINN4SOH/` 目录
+- [ ] 报 `<仓库根>/results 不存在` → 在跑 `results analysis/*.py`，需 `cd results analysis` 或改用
+      `python run_all.py analyze`

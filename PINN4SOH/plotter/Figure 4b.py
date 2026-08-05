@@ -109,7 +109,7 @@ for data in ['XJTU','TJU','MIT','HUST']:
         # 在y轴顶端添加百分号文本标签 (add a percentage text at the top of the y-axis)
         x_min, x_max = ax.get_xlim()
         y_max = ax.get_ylim()[1]
-        ax.annotate('(\%)', xy=(x_min, y_max), xytext=(-2, 3),
+        ax.annotate(r'(\%)', xy=(x_min, y_max), xytext=(-2, 3),
                     textcoords='offset points', ha='center', fontsize=8)
         ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
 
@@ -138,7 +138,7 @@ mean_line = Line2D([0], [0], color='red', linestyle='-', linewidth=1)
 std_line = Line2D([0, 0], [0, 1], color='black', linestyle='-', linewidth=1)
 boxs.append(mean_line)
 boxs.append(std_line)
-legend_labes = ['Ours', 'MLP', 'CNN', 'Mean', 'Mean $\pm$ Std']
+legend_labes = ['Ours', 'MLP', 'CNN', 'Mean', r'Mean $\pm$ Std']
 axs[2, 3].legend(handles=boxs,labels=legend_labes, loc=[0.2, 0],
                  handlelength=4,
                  handleheight=2.5,
