@@ -44,12 +44,17 @@ nc-PINN/                                  ← 顶层 Git 仓库（日常只在�
 
 | 分支 | 状态 | 内容 |
 |------|------|------|
-| `main` | **主线**，日常在此提交 | `docs/`（论文解读）、`PINN4SOH/`（修复与验证）、`README.md` |
-| `my-reproduction` | 历史存档分支 | `nc-pinn/docs/beginner-guide/`（8 篇初学者指南）、`nc-pinn/docs/onther/`（早期分析）、`nc-PINN.pdf` |
+| `main` | **唯一分支**（本地与远端一致） | 全部内容：`docs/`、`PINN4SOH/`、`README.md` |
 
-**关于 `my-reproduction`**：该分支与 `main` **没有共同祖先**（两条独立初始提交），
-因此无法用常规方式 merge 或 diff。其内容已作为普通文件归并进 `main`，
-分支本身保留仅作历史存档 —— 请勿在此分支上继续开发，也不要尝试合并两条历史。
+> **历史说明**：仓库早期曾存在一个 `my-reproduction` 分支，与 `main` **没有共同祖先**
+> （两条独立初始提交），无法 merge 或 diff。其内容（初学者指南 8 篇、早期分析 6 篇）
+> 已作为普通文件归并入 `main` 的 `docs/` 目录；该分支已在仓库整理时删除（本地与远端），
+> 全仓库历史收敛为**单一主线**。校验方式：
+>
+> ```bash
+> git rev-list --max-parents=0 --all      # 应只返回 1 个根提交
+> git branch -a                           # 应只有 main
+> ```
 
 ## 四、日常工作流
 
