@@ -226,3 +226,52 @@ python check_consistency.py      # 6/6 通过
 ```
 
 ---
+
+## 2026-08-06 — 统一实验数据源与文档数字更正
+
+### 背景
+
+仓库内同一指标曾出现多套互相矛盾的数字，且部分数字**没有任何实验产物支撑**
+（例如"1 周期 PINN MAPE ~1.8%""HUST→XJTU 迁移 1.52%"），另有个别把论文报告值
+当作本仓库实测值使用的情况。
+
+### 改动
+
+#### 1. `README.md`
+- 数据集规模更正为 **XJTU 55 / HUST 77 / MIT 125 / TJU 130**（合计 387，与论文口径一致）。
+  原表写作 HUST 166 / TJU 52 / MIT 124，合计 397，与论文矛盾且与 `data/` 实际文件数不符。
+- clone 与 Issues 链接更正为真实远端 `readant/PINN4SOH-reproduction`
+  （原写作不存在的 `readant/nc-PINN`）。
+- 补充"质量保障"与"数据源纪律"两节。
+
+#### 2. `docs/06-experiments.md`
+- 全部数字替换为 `results/SUMMARY.md` 的实测值；
+- 删除小样本实验与未执行迁移组合的数字，改为明确列出"本仓库尚未执行的实验"；
+- 更正数据集规模表与实验规模表。
+
+#### 3. `nc-pinn/docs/beginner-guide/`
+- `01-paper-overview.md`：数据集表更正；基线对比改为本仓库实测值（基线仅覆盖 XJTU）；
+- `05-understand-results.md`：区分"论文报告值"与"本仓库实测值"；
+  删除无产物支撑的 Fig.5 / Fig.6 数字，改为"尚未执行"并给出补做命令。
+
+#### 4. `docs/GIT_USAGE.md`
+- 重写：更正仓库名（原写"解剖论文/"）、移除已不存在的目录、补充分支说明
+  （含 `my-reproduction` 为无共同祖先的存档分支）、版本控制边界与常见问题。
+
+### 新增
+
+| 文件 | 用途 |
+| --- | --- |
+| `PINN4SOH/data/README.md` | 数据集来源、目录结构、CSV 格式与许可说明 |
+| `PINN4SOH/results/SUMMARY.md` | 由 `results_summary.py` 生成（本次首次产出） |
+| `.github/workflows/ci.yml` | 最小 CI：语法检查 + 一致性校验 |
+
+### 验证方式
+
+```bash
+cd PINN4SOH
+python check_consistency.py      # 6/6 通过
+python results_summary.py        # 重新生成 SUMMARY.md
+```
+
+文档中出现的每个实测 MAPE 均可在 `results/SUMMARY.md` 中定位。

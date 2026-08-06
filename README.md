@@ -32,7 +32,8 @@
 
 ## 验证结果
 
-在 Python 3.12 + PyTorch 2.11 环境下，官方代码核心算法有效性得到验证：
+在 Python 3.12 + PyTorch 2.11 环境下，官方代码核心算法有效性得到验证
+（完整实测表格见 `PINN4SOH/results/SUMMARY.md`，由 `results_summary.py` 从原始产物汇总）：
 
 | 指标 | 论文报告 | 本环境验证 | 偏差 |
 |------|---------|-----------|------|
@@ -41,6 +42,12 @@
 | MIT MAPE | 0.78% | 0.73% | -0.05% |
 | TJU MAPE | 1.21% | 1.13% | -0.08% |
 | **平均 MAPE** | **0.87%** | **0.88%** | **+0.01%** |
+
+> 复现该表：`cd PINN4SOH && python results_summary.py`
+>
+> **数据源纪律**：仓库内所有文档引用实验数字时，一律以 `PINN4SOH/results/SUMMARY.md` 为准。
+> `results analysis/processed results/*.xlsx` 是**原作者随仓库提供**的处理结果（对应论文数值），
+> 与本仓库实测不是同一套数据，两者不可混用。
 
 ---
 
@@ -74,7 +81,20 @@ python run_all.py finetune       # 迁移学习
 
 ### 3. 技术文档
 
-编写了 14 篇中文技术文档（`docs/` 目录），覆盖论文方法解读、代码对应关系、复现指南等。
+编写了 14 篇中文技术文档（`docs/` 目录），覆盖论文方法解读、代码对应关系、验证指南等。
+文档中出现的每个文件路径与类名都可通过 `PINN4SOH/check_consistency.py` 自动校验。
+
+### 4. 质量保障
+
+仓库自带四个可复跑的校验脚本（均在 `PINN4SOH/` 目录下运行）：
+
+| 脚本 | 作用 | 期望结果 |
+|------|------|---------|
+| `python verify_fixes.py` | 修复回归：随机种子、统一划分、已知缺陷、早停策略 | **10/10 通过** |
+| `python verify_fixes.py --e2e` | 追加端到端训练（XJTU 2C，两种划分各 2 epoch） | **12/12 通过** |
+| `python check_split.py` | 打印 legacy / uniform 两类划分的对照结果 | 正常输出 |
+| `python check_consistency.py` | 校验文档引用的路径、类名、声明与代码是否一致 | 全部通过 |
+| `python smoke_test.py` | 1 epoch 冒烟（固定种子 + 统一划分） | 正常结束，退出码 0 |
 
 ---
 
@@ -91,8 +111,8 @@ python run_all.py finetune       # 迁移学习
 ### 安装与运行
 
 ```bash
-# 克隆仓库
-git clone https://github.com/readant/nc-PINN.git
+# 克隆仓库（远端仓库名为 PINN4SOH-reproduction，本地目录沿用 nc-PINN）
+git clone https://github.com/readant/PINN4SOH-reproduction.git nc-PINN
 cd nc-PINN
 
 # 创建环境
@@ -114,14 +134,21 @@ python run_all.py all
 ```
 nc-PINN/
 ├── README.md                          # 本文件
-├── docs/                              # 论文解读文档（14篇）
+├── docs/                              # 论文解读与改动说明（14 篇 + CHANGELOG）
 ├── PINN4SOH/                          # 官方代码（已适配新环境）
-│   ├── Model/                         # PINN模型实现
-│   ├── dataloader/                    # 数据加载器
+│   ├── Model/                         # Solution_u / dynamical_F / 基线模型
+│   ├── dataloader/                    # 数据加载与特征提取
+│   ├── utils/                         # util.py（种子/日志/指标）+ split.py（统一划分）
 │   ├── main_*.py                      # 各数据集训练入口
-│   ├── run_all.py                     # 一键运行入口（新增）
-│   ├── validate.py                    # 快速验证脚本（新增）
-│   ├── data/                          # 预处理后的数据集
+│   ├── main_finetune.py               # 迁移学习入口（原文件名含空格，已重命名）
+│   ├── run_all.py                     # 一键调度入口
+│   ├── results_summary.py             # 实验结果汇总 → results/SUMMARY.md（唯一数据源）
+│   ├── verify_fixes.py                # 修复回归验证（含端到端训练）
+│   ├── check_split.py                 # 数据划分规则体检
+│   ├── check_consistency.py           # 文档-代码一致性校验
+│   ├── validate.py / smoke_test.py    # 快速验证 / 冒烟测试
+│   ├── data/                          # 预处理后的数据集（387 个 CSV）
+│   ├── results/                       # 实验产物 + SUMMARY.md
 │   └── pretrained model/              # 预训练模型权重
 └── Battery-dataset-preprocessing-code-library/  # 数据预处理代码库
 ```
@@ -132,12 +159,16 @@ nc-PINN/
 
 本项目使用以下公开电池数据集：
 
-| 数据集 | 电池类型 | 化学体系 | 电池数 | 来源 |
-|--------|---------|---------|--------|------|
-| XJTU | NCM | LiNi₀.₅Co₀.₂Mn₀.₃O₂ | 55 | [Zenodo](https://zenodo.org/records/10963339) |
-| TJU | NCA/NCM | LiNiCo-x | 52 | [Zenodo](https://zenodo.org/record/6405084) |
-| HUST | LFP | LiFePO₄ | 166 | [Mendeley](https://data.mendeley.com/datasets/nsc7hnsg4s/2) |
-| MIT | LFP | LiFePO₄ | 124 | [MIT](https://data.matr.io/1/projects/5c48dd2bc625d700019f3204) |
+| 数据集 | 化学体系 | 电池数 | 来源 |
+|--------|---------|--------|------|
+| XJTU | NCM（LiNi₀.₅Co₀.₂Mn₀.₃O₂） | 55 | [Zenodo](https://zenodo.org/records/10963339) |
+| HUST | LFP / 石墨 | 77 | [Mendeley](https://data.mendeley.com/datasets/nsc7hnsg4s/2) |
+| MIT | LFP / 石墨 | 125 | [MIT](https://data.matr.io/1/projects/5c48dd2bc625d700019f3204) |
+| TJU | NCA / NCM / NCM·NCA | 130 | [Zenodo](https://zenodo.org/record/6405084) |
+| **合计** | — | **387** | 与论文「387 只电池、310,705 个样本」一致 |
+
+> 电池数为本仓库 `PINN4SOH/data/` 目录下的实际 CSV 文件数。
+> 各数据集许可条款不同（HUST、MIT 为 CC BY 4.0），再分发前请自行确认。
 
 ---
 
@@ -195,6 +226,6 @@ nc-PINN/
 
 ## 联系方式
 
-- GitHub Issues: [https://github.com/readant/nc-PINN/issues](https://github.com/readant/nc-PINN/issues)
+- GitHub Issues: [https://github.com/readant/PINN4SOH-reproduction/issues](https://github.com/readant/PINN4SOH-reproduction/issues)
 - Email: 3908492312@qq.com
 - Gmail: readant123@gmail.com

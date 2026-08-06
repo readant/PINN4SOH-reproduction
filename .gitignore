@@ -11,7 +11,7 @@ __pycache__/
 .ruff_cache/
 
 # 临时测试产物
-results/smoke_test/
+PINN4SOH/results/smoke_test/
 
 # IDE
 .idea/
@@ -29,5 +29,16 @@ PINN4SOH/results/MLP/*.zip
 PINN4SOH/results/CNN/*.zip
 
 
-# 学习研究草稿
-nc-pinn/
+# 本地 AI 工具 / 代理状态目录
+.mimocode/
+
+# 验证与回归脚本产生的临时产物
+PINN4SOH/results/verify_fixes_*/
+PINN4SOH/results/*_logger_probe.txt
+
+# 原作者提供的结果包（zip 及其解压产物；体量大、可按需获取）
+PINN4SOH/results/Ours/
+PINN4SOH/results/MLP/
+PINN4SOH/results/CNN/
+
+# 说明：nc-pinn/ 下的学习文档（beginner-guide 等）已纳入版本控制，原忽略规则已移除
