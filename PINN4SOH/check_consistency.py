@@ -86,7 +86,7 @@ def is_review_doc(rel):
     文档里虚构过的文件），因此不参与"引用必须存在"与"不得含废弃符号"两项检查。
     """
     base = os.path.basename(rel)
-    return base.startswith('审查报告') or base.startswith('整改')
+    return ('审查报告' in base) or ('整改' in base)
 
 
 CODE_TOKEN = re.compile(r'`([^`\n]{3,80}?\.py(?::\d+(?:-\d+)?)?)`')
