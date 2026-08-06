@@ -81,6 +81,19 @@ git commit -m "fix: 修复 xxx"
 
 示例：`fix: 修复早停判据耦合测试集的问题`、`docs: 更新论文解读中的网络结构描述`
 
+**正文（body）**：改动较大时补一段说明范围与要点，与标题之间空一行。例如：
+
+```
+feat: 纳入 PINN4SOH 官方代码与数据预处理代码库
+
+- PINN4SOH：Model / dataloader / main_* / plotter / results analysis
+- Battery-dataset-preprocessing-code-library：四个数据集的预处理类
+- 已应用 Python 3.12 与 PyTorch 2.x 的环境适配修复
+```
+
+> 仓库的历史提交已按本规范统一：描述一律改为中文、前缀归入上表集合、
+> 较大的提交补齐正文；**提交时间与文件内容均保持原样**，未做任何改写。
+
 ### 查看历史与改动
 
 ```bash
